@@ -20,6 +20,26 @@ const SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email',
 ];
 
+const CALENDAR_COLORS = [
+  '#4285F4',
+  '#EA4335',
+  '#34A853',
+  '#FBBC04',
+  '#AB47BC',
+  '#FF6D00',
+  '#00897B',
+  '#E91E63',
+];
+
+async function defaultColorForFamily(familyId: string): Promise<string> {
+  const result = await pool.query<{ count: string }>(
+    'SELECT COUNT(*)::text AS count FROM calendar_connections WHERE family_id = $1',
+    [familyId],
+  );
+  const count = Number(result.rows[0]?.count ?? 0);
+  return CALENDAR_COLORS[count % CALENDAR_COLORS.length];
+}
+
 calendarsRouter.get('/', requireFamilyAuth, async (req, res) => {
   const result = await pool.query(
     `SELECT id, google_account_email, nickname, color, created_at, last_synced_at
@@ -33,13 +53,23 @@ calendarsRouter.get('/', requireFamilyAuth, async (req, res) => {
 
 calendarsRouter.patch('/:id', requireFamilyAuth, async (req, res) => {
   const { nickname, color } = req.body as { nickname?: string; color?: string };
+
+  if (nickname !== undefined && nickname.trim() === '') {
+    res.status(400).json({ error: 'Nickname cannot be empty' });
+    return;
+  }
+  if (color !== undefined && !CALENDAR_COLORS.includes(color)) {
+    res.status(400).json({ error: 'Invalid color' });
+    return;
+  }
+
   const result = await pool.query(
     `UPDATE calendar_connections
      SET nickname = COALESCE($3, nickname),
          color = COALESCE($4, color)
      WHERE id = $1 AND family_id = $2
      RETURNING id, google_account_email, nickname, color, created_at, last_synced_at`,
-    [req.params.id, req.auth!.familyId, nickname ?? null, color ?? null],
+    [req.params.id, req.auth!.familyId, nickname?.trim() ?? null, color ?? null],
   );
   if (result.rowCount === 0) {
     res.status(404).json({ error: 'Calendar not found' });
@@ -103,15 +133,16 @@ calendarsRouter.get('/oauth/callback', async (req, res) => {
 
     const encrypted = encrypt(tokens.refresh_token);
     const nickname = email.split('@')[0];
+    const color = await defaultColorForFamily(familyId);
 
     const inserted = await pool.query<{ id: string }>(
       `INSERT INTO calendar_connections
-        (family_id, google_account_email, refresh_token_encrypted, nickname)
-       VALUES ($1, $2, $3, $4)
+        (family_id, google_account_email, refresh_token_encrypted, nickname, color)
+       VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (family_id, google_account_email)
        DO UPDATE SET refresh_token_encrypted = EXCLUDED.refresh_token_encrypted
        RETURNING id`,
-      [familyId, email, encrypted, nickname],
+      [familyId, email, encrypted, nickname, color],
     );
 
     void listGoogleEventsForConnection(inserted.rows[0].id).catch((error) => {

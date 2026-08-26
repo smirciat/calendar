@@ -104,6 +104,23 @@ class ApiClient {
         .toList();
   }
 
+  Future<CalendarConnection> updateCalendar(
+    String id, {
+    String? nickname,
+    String? color,
+  }) async {
+    final response = await http.patch(
+      _uri('/api/v1/calendars/$id'),
+      headers: _headers,
+      body: jsonEncode({
+        if (nickname != null) 'nickname': nickname,
+        if (color != null) 'color': color,
+      }),
+    );
+    final body = await _decode(response);
+    return CalendarConnection.fromJson(body);
+  }
+
   Future<String> getOAuthUrl() async {
     final response = await http.get(
       _uri('/api/v1/calendars/oauth/start'),
