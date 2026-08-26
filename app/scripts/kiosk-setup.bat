@@ -2,14 +2,15 @@
 setlocal EnableExtensions
 
 REM Family Calendar kiosk setup for Windows (CMD)
-REM Run from: calendar\app\scripts
+REM Safe to run from any directory (uses script location).
 REM Requires: adb in PATH, USB debugging on wall device
 
+set "SCRIPT_DIR=%~dp0"
 set "FAMILY_PKG=com.smircich.familycalendar.kiosk"
 set "MAIN_ACTIVITY=%FAMILY_PKG%/com.familycalendar.family_calendar.MainActivity"
 set "KIOSK_HOME=%FAMILY_PKG%/com.familycalendar.family_calendar.KioskHome"
 set "DEVICE_ADMIN=%FAMILY_PKG%/com.familycalendar.family_calendar.KioskDeviceAdminReceiver"
-set "APK_PATH=..\build\app\outputs\flutter-apk\app-kiosk-release.apk"
+set "APK_PATH=%SCRIPT_DIR%..\build\app\outputs\flutter-apk\app-kiosk-release.apk"
 
 echo.
 echo ========================================
@@ -41,7 +42,7 @@ if exist "%APK_PATH%" (
   adb install -r "%APK_PATH%"
 ) else (
   echo APK not found at %APK_PATH%
-  echo Build first: flutter build apk --flavor kiosk -t lib/main_kiosk.dart
+  echo Build first: build-kiosk.bat
 )
 
 echo.
