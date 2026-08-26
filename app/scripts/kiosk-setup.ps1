@@ -4,7 +4,7 @@
 
 $ErrorActionPreference = "Continue"
 
-$FamilyPkg = "com.familycalendar.family_calendar.kiosk"
+$FamilyPkg = "com.smircich.familycalendar.kiosk"
 $MainActivity = "$FamilyPkg/com.familycalendar.family_calendar.MainActivity"
 $KioskHome = "$FamilyPkg/com.familycalendar.family_calendar.KioskHome"
 $DeviceAdmin = "$FamilyPkg/com.familycalendar.family_calendar.KioskDeviceAdminReceiver"
@@ -85,7 +85,7 @@ Write-Host "Current default HOME:"
 Invoke-Adb "shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"
 Write-Host ""
 Write-Host "Installed family packages:"
-Invoke-Adb "shell pm list packages familycalendar"
+Invoke-Adb "shell pm list packages smircich"
 
 Write-Host ""
 Write-Host "========================================"

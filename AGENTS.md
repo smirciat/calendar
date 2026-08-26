@@ -97,10 +97,10 @@ The `add-role-holder` command often fails on Android 10 with a Java exception â€
 # Windows â€” from calendar\app after building kiosk APK
 adb shell pm enable com.fujia.calendar
 adb install -r build\app\outputs\flutter-apk\app-kiosk-release.apk
-adb shell am start -n com.familycalendar.family_calendar.kiosk/com.familycalendar.family_calendar.MainActivity
-adb shell cmd role add-role-holder android.app.role.HOME com.familycalendar.family_calendar.kiosk
-adb shell cmd package set-home-activity com.familycalendar.family_calendar.kiosk/com.familycalendar.family_calendar.KioskHome
-adb shell dpm set-device-owner com.familycalendar.family_calendar.kiosk/com.familycalendar.family_calendar.KioskDeviceAdminReceiver
+adb shell am start -n com.smircich.familycalendar.kiosk/com.familycalendar.family_calendar.MainActivity
+adb shell cmd role add-role-holder android.app.role.HOME com.smircich.familycalendar.kiosk
+adb shell cmd package set-home-activity com.smircich.familycalendar.kiosk/com.familycalendar.family_calendar.KioskHome
+adb shell dpm set-device-owner com.smircich.familycalendar.kiosk/com.familycalendar.family_calendar.KioskDeviceAdminReceiver
 adb reboot
 ```
 

@@ -5,7 +5,7 @@ REM Family Calendar kiosk setup for Windows (CMD)
 REM Run from: calendar\app\scripts
 REM Requires: adb in PATH, USB debugging on wall device
 
-set "FAMILY_PKG=com.familycalendar.family_calendar.kiosk"
+set "FAMILY_PKG=com.smircich.familycalendar.kiosk"
 set "MAIN_ACTIVITY=%FAMILY_PKG%/com.familycalendar.family_calendar.MainActivity"
 set "KIOSK_HOME=%FAMILY_PKG%/com.familycalendar.family_calendar.KioskHome"
 set "DEVICE_ADMIN=%FAMILY_PKG%/com.familycalendar.family_calendar.KioskDeviceAdminReceiver"
@@ -86,7 +86,7 @@ echo Current default HOME:
 adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME
 echo.
 echo Installed family packages:
-adb shell pm list packages familycalendar
+adb shell pm list packages smircich
 
 echo.
 echo ========================================

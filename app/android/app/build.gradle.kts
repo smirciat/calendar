@@ -15,7 +15,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.familycalendar.family_calendar"
+        applicationId = "com.smircich.familycalendar"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -26,7 +26,6 @@ android {
     productFlavors {
         create("mobile") {
             dimension = "app"
-            applicationIdSuffix = ".mobile"
         }
         create("kiosk") {
             dimension = "app"

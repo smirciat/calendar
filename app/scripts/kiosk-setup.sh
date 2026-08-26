@@ -2,13 +2,13 @@
 # One-time kiosk wall setup over ADB.
 set -euo pipefail
 
-FAMILY_PKG="com.familycalendar.family_calendar.kiosk"
+FAMILY_PKG="com.smircich.familycalendar.kiosk"
 MAIN_ACTIVITY="${FAMILY_PKG}/com.familycalendar.family_calendar.MainActivity"
 FAMILY_HOME="${FAMILY_PKG}/com.familycalendar.family_calendar.KioskHome"
 DEVICE_ADMIN="${FAMILY_PKG}/com.familycalendar.family_calendar.KioskDeviceAdminReceiver"
 
 echo "=== Installed family calendar packages ==="
-adb shell pm list packages | grep -i family || true
+adb shell pm list packages | grep -i smircich || true
 
 echo
 echo "=== Current default HOME launcher ==="
@@ -38,7 +38,7 @@ echo "=== Verifying ==="
 adb shell cmd package resolve-activity --brief \
   -a android.intent.action.MAIN -c android.intent.category.HOME
 
-adb shell pm list packages | grep -i family || true
+adb shell pm list packages | grep -i smircich || true
 
 echo
 echo "Done. Reboot to test: adb reboot"
