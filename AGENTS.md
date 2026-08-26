@@ -81,3 +81,18 @@ Postgres (families, users, calendar links, cached events, devices)
 1. Log in on phone → **Add wall display** → server returns a 6-character code (15 min TTL).
 2. On kiosk first boot: enter **server URL** + **pairing code** → receives long-lived device token.
 3. Token stored locally; kiosk goes straight to calendar grid on subsequent launches.
+
+## Kiosk as default launcher (survives reboot)
+
+Kiosk APK registers as a **HOME** app (`src/kiosk/AndroidManifest.xml`) and relaunches on `BOOT_COMPLETED`.
+
+**One-time setup after sideload:**
+
+```bash
+adb install -r app-kiosk-release.apk
+adb shell cmd package set-home-activity com.familycalendar.family_calendar.kiosk/com.familycalendar.family_calendar.MainActivity
+```
+
+Or on device: press **Home** → choose **Family Calendar Wall** → **Always**.
+
+After that, reboots return to the calendar without developer settings.
