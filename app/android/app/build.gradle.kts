@@ -27,12 +27,10 @@ android {
         create("mobile") {
             dimension = "app"
             applicationIdSuffix = ".mobile"
-            resValue("string", "app_name", "Family Calendar")
         }
         create("kiosk") {
             dimension = "app"
             applicationIdSuffix = ".kiosk"
-            resValue("string", "app_name", "Family Calendar Wall")
         }
     }
 
