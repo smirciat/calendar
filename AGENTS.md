@@ -90,7 +90,7 @@ Kiosk APK registers as a **HOME** app (`src/kiosk/AndroidManifest.xml`) and rela
 
 ```bash
 adb install -r app-kiosk-release.apk
-adb shell cmd package set-home-activity com.familycalendar.family_calendar.kiosk/com.familycalendar.family_calendar.MainActivity
+adb shell cmd package set-home-activity com.familycalendar.family_calendar.kiosk/com.familycalendar.family_calendar.KioskHome
 ```
 
 Or on device: press **Home** → choose **Family Calendar Wall** → **Always**.
