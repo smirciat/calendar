@@ -121,6 +121,23 @@ class ApiClient {
     return CalendarConnection.fromJson(body);
   }
 
+  Future<CalendarConnection> addIcsCalendar({
+    required String feedUrl,
+    String? nickname,
+  }) async {
+    final response = await http.post(
+      _uri('/api/v1/calendars/ics'),
+      headers: _headers,
+      body: jsonEncode({
+        'feedUrl': feedUrl,
+        if (nickname != null && nickname.trim().isNotEmpty)
+          'nickname': nickname.trim(),
+      }),
+    );
+    final body = await _decode(response);
+    return CalendarConnection.fromJson(body);
+  }
+
   Future<String> getOAuthUrl() async {
     final response = await http.get(
       _uri('/api/v1/calendars/oauth/start'),

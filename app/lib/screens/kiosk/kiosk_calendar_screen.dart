@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:family_calendar/models/calendar_models.dart';
 import 'package:family_calendar/services/api_client.dart';
 import 'package:family_calendar/services/session_storage.dart';
+import 'package:family_calendar/utils/calendar_event_utils.dart';
 import 'package:family_calendar/widgets/calendar_grid.dart';
 import 'package:family_calendar/widgets/day_detail_sheet.dart';
 
@@ -26,9 +27,11 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
   bool _eventsLoading = true;
   String? _error;
   int _weekRows = 5;
+  double _fontScale = 1.0;
   final _storage = SessionStorage();
   Timer? _idleTimer;
   Timer? _clockSyncTimer;
+  Timer? _pollTimer;
   bool _initialAnchorChecked = false;
 
   @override
@@ -36,10 +39,14 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _syncAnchorToNow());
-    _loadWeekRows();
+    _loadDisplaySettings();
     _clockSyncTimer = Timer(const Duration(seconds: 5), () {
       if (!mounted) return;
       _syncAnchorToNow(reloadEvents: true);
+    });
+    _pollTimer = Timer.periodic(calendarEventPollInterval, (_) {
+      if (!mounted) return;
+      _loadEvents(silent: true);
     });
     _loadEvents();
     _resetIdleTimer();
@@ -50,6 +57,7 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
     WidgetsBinding.instance.removeObserver(this);
     _idleTimer?.cancel();
     _clockSyncTimer?.cancel();
+    _pollTimer?.cancel();
     super.dispose();
   }
 
@@ -60,11 +68,16 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
     }
   }
 
-  Future<void> _loadWeekRows() async {
+  Future<void> _loadDisplaySettings() async {
     final rows = await _storage.getKioskWeekRows();
+    final fontScale = await _storage.getFontScale();
     if (!mounted) return;
-    if (rows != _weekRows) {
-      setState(() => _weekRows = rows);
+    final rowsChanged = rows != _weekRows;
+    setState(() {
+      _weekRows = rows;
+      _fontScale = fontScale;
+    });
+    if (rowsChanged) {
       _loadEvents();
     }
   }
@@ -75,6 +88,13 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
     setState(() => _weekRows = rows);
     await _storage.setKioskWeekRows(rows);
     _loadEvents();
+  }
+
+  Future<void> _setFontScale(double scale) async {
+    if (scale == _fontScale) return;
+    _onUserInteraction();
+    setState(() => _fontScale = scale);
+    await _storage.setFontScale(scale);
   }
 
   void _syncAnchorToNow({bool reloadEvents = false}) {
@@ -110,11 +130,13 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
     _resetIdleTimer();
   }
 
-  Future<void> _loadEvents() async {
-    setState(() {
-      _eventsLoading = true;
-      _error = null;
-    });
+  Future<void> _loadEvents({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _eventsLoading = true;
+        _error = null;
+      });
+    }
     try {
       final from = _anchor.subtract(const Duration(days: 7));
       final to = _anchor.add(Duration(days: 7 * _weekRows + 7));
@@ -123,9 +145,11 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
       setState(() => _events = events);
     } on ApiException catch (error) {
       if (!mounted) return;
-      setState(() => _error = error.message);
+      if (!silent) {
+        setState(() => _error = error.message);
+      }
     } finally {
-      if (mounted) setState(() => _eventsLoading = false);
+      if (mounted && !silent) setState(() => _eventsLoading = false);
     }
   }
 
@@ -154,6 +178,26 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
         appBar: AppBar(
           title: const Text('Family Calendar'),
           actions: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<double>(
+                  value: _nearestFontScaleOption(_fontScale),
+                  alignment: Alignment.centerRight,
+                  items: calendarFontScaleOptions
+                      .map(
+                        (scale) => DropdownMenuItem(
+                          value: scale,
+                          child: Text(fontScaleLabel(scale)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) _setFontScale(value);
+                  },
+                ),
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: DropdownButtonHideUnderline(
@@ -203,6 +247,7 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
                   weeks: weeks,
                   events: _events,
                   weekRowCount: _weekRows,
+                  fontScale: _fontScale,
                   onDayTap: (day, events) {
                     _onUserInteraction();
                     showDayDetailSheet(
@@ -210,6 +255,7 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
                       day,
                       events,
                       kiosk: true,
+                      fontScale: _fontScale,
                     );
                   },
                 ),
@@ -217,4 +263,10 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
       ),
     );
   }
+}
+
+double _nearestFontScaleOption(double scale) {
+  return calendarFontScaleOptions.reduce(
+    (a, b) => (a - scale).abs() <= (b - scale).abs() ? a : b,
+  );
 }

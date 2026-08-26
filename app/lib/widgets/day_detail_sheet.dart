@@ -9,8 +9,9 @@ Future<void> showDayDetailSheet(
   DateTime day,
   List<CalendarEvent> events, {
   bool kiosk = false,
+  double fontScale = 1.0,
 }) {
-  final groups = groupDuplicateEvents(events);
+  final groups = groupDuplicateEvents(events, onDay: day);
 
   return showModalBottomSheet<void>(
     context: context,
@@ -31,7 +32,12 @@ Future<void> showDayDetailSheet(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                   child: Text(
                     DateFormat.yMMMMEEEEd().format(day),
-                    style: Theme.of(context).textTheme.titleLarge,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontSize:
+                          (Theme.of(context).textTheme.titleLarge?.fontSize ??
+                              22) *
+                          fontScale,
+                    ),
                   ),
                 ),
                 Expanded(
@@ -45,7 +51,10 @@ Future<void> showDayDetailSheet(
                           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                           itemCount: groups.length,
                           itemBuilder: (context, index) {
-                            return _EventGroupTile(group: groups[index]);
+                            return _EventGroupTile(
+                              group: groups[index],
+                              fontScale: fontScale,
+                            );
                           },
                         ),
                 ),
@@ -59,9 +68,13 @@ Future<void> showDayDetailSheet(
 }
 
 class _EventGroupTile extends StatefulWidget {
-  const _EventGroupTile({required this.group});
+  const _EventGroupTile({
+    required this.group,
+    this.fontScale = 1.0,
+  });
 
   final EventDisplayGroup group;
+  final double fontScale;
 
   @override
   State<_EventGroupTile> createState() => _EventGroupTileState();
@@ -74,6 +87,28 @@ class _EventGroupTileState extends State<_EventGroupTile> {
   Widget build(BuildContext context) {
     final group = widget.group;
     final primary = group.primary;
+    final titleStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
+      fontSize:
+          (Theme.of(context).textTheme.titleMedium?.fontSize ?? 16) *
+          widget.fontScale,
+    );
+    final bodyStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+      fontSize:
+          (Theme.of(context).textTheme.bodyMedium?.fontSize ?? 14) *
+          widget.fontScale,
+    );
+    final smallStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
+      fontSize:
+          (Theme.of(context).textTheme.bodySmall?.fontSize ?? 12) *
+          widget.fontScale,
+    );
+    final labelStyle = Theme.of(context).textTheme.labelLarge?.copyWith(
+      color: Theme.of(context).colorScheme.primary,
+      fontWeight: FontWeight.bold,
+      fontSize:
+          (Theme.of(context).textTheme.labelLarge?.fontSize ?? 14) *
+          widget.fontScale,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,17 +141,14 @@ class _EventGroupTileState extends State<_EventGroupTile> {
                           Expanded(
                             child: Text(
                               primary.title,
-                              style: Theme.of(context).textTheme.titleMedium,
+                              style: titleStyle,
                             ),
                           ),
                           if (group.hasDuplicates) ...[
                             const SizedBox(width: 8),
                             Text(
                               '+${group.duplicateCount}',
-                              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: labelStyle,
                             ),
                             Icon(
                               _expanded
@@ -130,12 +162,12 @@ class _EventGroupTileState extends State<_EventGroupTile> {
                       const SizedBox(height: 4),
                       Text(
                         _formatEventTime(primary),
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        style: bodyStyle,
                       ),
                       if (!group.hasDuplicates)
                         Text(
                           primary.nickname,
-                          style: Theme.of(context).textTheme.bodySmall,
+                          style: smallStyle,
                         ),
                     ],
                   ),
@@ -162,7 +194,7 @@ class _EventGroupTileState extends State<_EventGroupTile> {
                   Expanded(
                     child: Text(
                       event.nickname,
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: smallStyle,
                     ),
                   ),
                 ],

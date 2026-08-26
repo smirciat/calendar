@@ -93,7 +93,7 @@ class _EditCalendarSheetState extends State<_EditCalendarSheet> {
           ),
           const SizedBox(height: 4),
           Text(
-            widget.calendar.googleAccountEmail,
+            widget.calendar.subtitle,
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 16),

@@ -4,8 +4,12 @@ import { config, googleOAuthConfigured } from '../config.js';
 import { pool } from '../db/pool.js';
 import { requireFamilyAuth } from '../middleware/auth.js';
 import { decrypt, encrypt } from '../services/crypto.js';
+import { listIcsEventsForConnection, validateIcsFeedUrl } from '../services/icsSync.js';
 
 export const calendarsRouter = Router();
+
+const CALENDAR_COLUMNS =
+  'id, source_type, google_account_email, feed_url, nickname, color, created_at, last_synced_at';
 
 function oauthClient() {
   return new google.auth.OAuth2(
@@ -42,13 +46,70 @@ async function defaultColorForFamily(familyId: string): Promise<string> {
 
 calendarsRouter.get('/', requireFamilyAuth, async (req, res) => {
   const result = await pool.query(
-    `SELECT id, google_account_email, nickname, color, created_at, last_synced_at
+    `SELECT ${CALENDAR_COLUMNS}
      FROM calendar_connections
      WHERE family_id = $1
      ORDER BY created_at ASC`,
     [req.auth!.familyId],
   );
   res.json(result.rows);
+});
+
+calendarsRouter.post('/ics', requireFamilyAuth, async (req, res) => {
+  const { feedUrl, nickname } = req.body as {
+    feedUrl?: string;
+    nickname?: string;
+  };
+
+  if (!feedUrl || feedUrl.trim() === '') {
+    res.status(400).json({ error: 'Calendar sync link is required' });
+    return;
+  }
+
+  let normalizedUrl: string;
+  try {
+    normalizedUrl = await validateIcsFeedUrl(feedUrl);
+  } catch (error) {
+    res.status(400).json({
+      error: error instanceof Error ? error.message : 'Invalid calendar sync link',
+    });
+    return;
+  }
+
+  const trimmedNickname = nickname?.trim();
+  if (trimmedNickname !== undefined && trimmedNickname === '') {
+    res.status(400).json({ error: 'Nickname cannot be empty' });
+    return;
+  }
+
+  const familyId = req.auth!.familyId;
+  const existing = await pool.query<{ id: string }>(
+    `SELECT id FROM calendar_connections
+     WHERE family_id = $1 AND source_type = 'ics' AND feed_url = $2`,
+    [familyId, normalizedUrl],
+  );
+
+  if (existing.rowCount && existing.rowCount > 0) {
+    res.status(409).json({ error: 'This calendar sync link is already linked' });
+    return;
+  }
+
+  const color = await defaultColorForFamily(familyId);
+  const displayName = trimmedNickname || 'Work shifts';
+
+  const inserted = await pool.query(
+    `INSERT INTO calendar_connections
+      (family_id, source_type, feed_url, nickname, color)
+     VALUES ($1, 'ics', $2, $3, $4)
+     RETURNING ${CALENDAR_COLUMNS}`,
+    [familyId, normalizedUrl, displayName, color],
+  );
+
+  void listIcsEventsForConnection(inserted.rows[0].id as string).catch((error) => {
+    console.error(`Initial ICS sync failed for ${normalizedUrl}:`, error);
+  });
+
+  res.status(201).json(inserted.rows[0]);
 });
 
 calendarsRouter.patch('/:id', requireFamilyAuth, async (req, res) => {
@@ -68,7 +129,7 @@ calendarsRouter.patch('/:id', requireFamilyAuth, async (req, res) => {
      SET nickname = COALESCE($3, nickname),
          color = COALESCE($4, color)
      WHERE id = $1 AND family_id = $2
-     RETURNING id, google_account_email, nickname, color, created_at, last_synced_at`,
+     RETURNING ${CALENDAR_COLUMNS}`,
     [req.params.id, req.auth!.familyId, nickname?.trim() ?? null, color ?? null],
   );
   if (result.rowCount === 0) {
@@ -135,17 +196,33 @@ calendarsRouter.get('/oauth/callback', async (req, res) => {
     const nickname = email.split('@')[0];
     const color = await defaultColorForFamily(familyId);
 
-    const inserted = await pool.query<{ id: string }>(
-      `INSERT INTO calendar_connections
-        (family_id, google_account_email, refresh_token_encrypted, nickname, color)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (family_id, google_account_email)
-       DO UPDATE SET refresh_token_encrypted = EXCLUDED.refresh_token_encrypted
-       RETURNING id`,
-      [familyId, email, encrypted, nickname, color],
+    const existing = await pool.query<{ id: string }>(
+      `SELECT id FROM calendar_connections
+       WHERE family_id = $1 AND source_type = 'google' AND google_account_email = $2`,
+      [familyId, email],
     );
 
-    void listGoogleEventsForConnection(inserted.rows[0].id).catch((error) => {
+    let connectionId: string;
+    if (existing.rowCount && existing.rowCount > 0) {
+      connectionId = existing.rows[0].id;
+      await pool.query(
+        `UPDATE calendar_connections
+         SET refresh_token_encrypted = $2
+         WHERE id = $1`,
+        [connectionId, encrypted],
+      );
+    } else {
+      const inserted = await pool.query<{ id: string }>(
+        `INSERT INTO calendar_connections
+          (family_id, source_type, google_account_email, refresh_token_encrypted, nickname, color)
+         VALUES ($1, 'google', $2, $3, $4, $5)
+         RETURNING id`,
+        [familyId, email, encrypted, nickname, color],
+      );
+      connectionId = inserted.rows[0].id;
+    }
+
+    void syncCalendarConnection(connectionId).catch((error) => {
       console.error(`Initial sync failed for ${email}:`, error);
     });
 
@@ -162,12 +239,29 @@ calendarsRouter.get('/oauth/callback', async (req, res) => {
   }
 });
 
+export async function syncCalendarConnection(connectionId: string): Promise<void> {
+  const result = await pool.query<{ source_type: string }>(
+    'SELECT source_type FROM calendar_connections WHERE id = $1',
+    [connectionId],
+  );
+  if (result.rowCount === 0) return;
+
+  if (result.rows[0].source_type === 'ics') {
+    await listIcsEventsForConnection(connectionId);
+    return;
+  }
+
+  await listGoogleEventsForConnection(connectionId);
+}
+
 export async function listGoogleEventsForConnection(connectionId: string): Promise<void> {
   const result = await pool.query<{
     id: string;
     refresh_token_encrypted: string;
   }>(
-    'SELECT id, refresh_token_encrypted FROM calendar_connections WHERE id = $1',
+    `SELECT id, refresh_token_encrypted
+     FROM calendar_connections
+     WHERE id = $1 AND source_type = 'google'`,
     [connectionId],
   );
   if (result.rowCount === 0) return;

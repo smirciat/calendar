@@ -12,6 +12,7 @@ class CalendarGrid extends StatelessWidget {
     required this.onDayTap,
     this.compact = false,
     this.weekRowCount = 5,
+    this.fontScale = 1.0,
   });
 
   final List<List<DateTime>> weeks;
@@ -19,10 +20,12 @@ class CalendarGrid extends StatelessWidget {
   final void Function(DateTime day, List<CalendarEvent> dayEvents) onDayTap;
   final bool compact;
   final int weekRowCount;
+  final double fontScale;
 
   static const _cellMargin = 2.0;
 
-  double get _densityScale => compact ? 1.0 : (5 / weekRowCount).clamp(1.0, 2.5);
+  double get _densityScale =>
+      (compact ? 1.0 : (5 / weekRowCount).clamp(1.0, 2.5)) * fontScale;
 
   TextStyle? _scaledStyle(BuildContext context, TextStyle? base) {
     if (base == null) return null;
@@ -67,7 +70,7 @@ class CalendarGrid extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: week.map((day) {
                     final dayEvents = eventsForDay(events, day);
-                    final dayGroups = groupDuplicateEvents(dayEvents);
+                    final dayGroups = groupDuplicateEvents(dayEvents, onDay: day);
                     final isToday = DateUtils.isSameDay(day, DateTime.now());
 
                     return Expanded(

@@ -1,5 +1,10 @@
 import 'package:family_calendar/models/calendar_models.dart';
 
+/// Match server default sync interval (see SYNC_INTERVAL_MS in .env).
+const calendarEventPollInterval = Duration(seconds: 60);
+
+const calendarFontScaleOptions = <double>[0.85, 1.0, 1.15, 1.3, 1.5];
+
 class EventDisplayGroup {
   EventDisplayGroup(this.events) : assert(events.isNotEmpty);
 
@@ -30,6 +35,42 @@ class WeekSpanSegment {
   final bool continuesAfter;
   final bool showTitle;
   final int lane;
+}
+
+String normalizeEventTitle(String title) {
+  return title.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+}
+
+/// Lower number = shown higher in the day list.
+int eventDisplayPriority(CalendarEvent event) {
+  final title = normalizeEventTitle(event.title);
+  if (title.contains('doctor') ||
+      title.startsWith('dr ') ||
+      title.startsWith('dr.') ||
+      title.contains(' appointment') ||
+      title.startsWith('appointment') ||
+      title.contains('appt')) {
+    return 0;
+  }
+  if (title.contains('shift') ||
+      title.contains('work') ||
+      title.contains('on call') ||
+      title.contains('on-call')) {
+    return 1;
+  }
+  return 2;
+}
+
+int compareEventsForDisplay(CalendarEvent a, CalendarEvent b) {
+  final byPriority = eventDisplayPriority(a).compareTo(eventDisplayPriority(b));
+  if (byPriority != 0) return byPriority;
+  final byStart = a.startAt.compareTo(b.startAt);
+  if (byStart != 0) return byStart;
+  return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+}
+
+int compareEventGroupsForDisplay(EventDisplayGroup a, EventDisplayGroup b) {
+  return compareEventsForDisplay(a.primary, b.primary);
 }
 
 DateTime eventStartDay(CalendarEvent event) {
@@ -82,10 +123,11 @@ bool eventOccursOnDay(CalendarEvent event, DateTime day) {
 }
 
 List<CalendarEvent> eventsForDay(List<CalendarEvent> events, DateTime day) {
-  return events
+  final dayEvents = events
       .where((event) => eventOccursOnDay(event, day))
-      .toList()
-    ..sort((a, b) => a.startAt.compareTo(b.startAt));
+      .toList();
+  dayEvents.sort(compareEventsForDisplay);
+  return dayEvents;
 }
 
 List<CalendarEvent> singleDayEventsForDay(
@@ -188,23 +230,39 @@ List<WeekSpanSegment> layoutWeekSpans(List<DateTime> week, List<EventDisplayGrou
   return placed;
 }
 
-String _dedupeKey(CalendarEvent event) {
-  final title = event.title.trim().toLowerCase();
-  if (event.allDay) {
-    return '$title|${event.startAt.year}-${event.startAt.month}-${event.startAt.day}|allDay';
+String _dayKey(DateTime day) => '${day.year}-${day.month}-${day.day}';
+
+String _dedupeKey(CalendarEvent event, {DateTime? onDay}) {
+  final title = normalizeEventTitle(event.title);
+  final day = onDay != null
+      ? DateTime(onDay.year, onDay.month, onDay.day)
+      : eventStartDay(event);
+  final dayKey = _dayKey(day);
+
+  // Same calendar day view: match by title only so all-day spans, daily
+  // all-day entries, and timed blocks for the same real-world event merge.
+  if (onDay != null) {
+    return '$title|$dayKey';
   }
-  final startMinute = event.startAt.millisecondsSinceEpoch ~/ 60000;
-  final endMinute = event.endAt.millisecondsSinceEpoch ~/ 60000;
-  return '$title|$startMinute|$endMinute';
+
+  if (event.allDay) {
+    return '$title|$dayKey|allDay';
+  }
+
+  final local = event.startAt.toLocal();
+  return '$title|$dayKey|${local.hour}:${local.minute}';
 }
 
-List<EventDisplayGroup> groupDuplicateEvents(List<CalendarEvent> events) {
-  final sorted = [...events]..sort((a, b) => a.startAt.compareTo(b.startAt));
+List<EventDisplayGroup> groupDuplicateEvents(
+  List<CalendarEvent> events, {
+  DateTime? onDay,
+}) {
+  final sorted = [...events]..sort(compareEventsForDisplay);
   final groups = <EventDisplayGroup>[];
   final keyToIndex = <String, int>{};
 
   for (final event in sorted) {
-    final key = _dedupeKey(event);
+    final key = _dedupeKey(event, onDay: onDay);
     final existingIndex = keyToIndex[key];
     if (existingIndex == null) {
       keyToIndex[key] = groups.length;
@@ -214,5 +272,14 @@ List<EventDisplayGroup> groupDuplicateEvents(List<CalendarEvent> events) {
     }
   }
 
+  groups.sort(compareEventGroupsForDisplay);
   return groups;
+}
+
+String fontScaleLabel(double scale) {
+  if (scale <= 0.9) return 'Small';
+  if (scale <= 1.05) return 'Default';
+  if (scale <= 1.2) return 'Large';
+  if (scale <= 1.35) return 'X-Large';
+  return 'XX-Large';
 }

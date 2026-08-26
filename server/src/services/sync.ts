@@ -1,5 +1,5 @@
 import { pool } from '../db/pool.js';
-import { listGoogleEventsForConnection } from '../routes/calendars.js';
+import { syncCalendarConnection } from '../routes/calendars.js';
 
 let syncTimer: NodeJS.Timeout | null = null;
 let syncing = false;
@@ -13,16 +13,24 @@ export async function syncAllCalendars(): Promise<void> {
     );
     for (const row of result.rows) {
       try {
-        await listGoogleEventsForConnection(row.id);
+        await syncCalendarConnection(row.id);
       } catch (error) {
-        const email = await pool.query<{ google_account_email: string }>(
-          'SELECT google_account_email FROM calendar_connections WHERE id = $1',
+        const label = await pool.query<{
+          google_account_email: string | null;
+          feed_url: string | null;
+          nickname: string;
+        }>(
+          `SELECT google_account_email, feed_url, nickname
+           FROM calendar_connections WHERE id = $1`,
           [row.id],
         );
-        console.error(
-          `Sync failed for ${email.rows[0]?.google_account_email ?? row.id}:`,
-          error,
-        );
+        const info = label.rows[0];
+        const name =
+          info?.google_account_email ??
+          info?.feed_url ??
+          info?.nickname ??
+          row.id;
+        console.error(`Sync failed for ${name}:`, error);
       }
     }
   } finally {

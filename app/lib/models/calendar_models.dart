@@ -39,22 +39,41 @@ class CalendarEvent {
 class CalendarConnection {
   CalendarConnection({
     required this.id,
-    required this.googleAccountEmail,
+    required this.sourceType,
     required this.nickname,
     required this.color,
+    this.googleAccountEmail,
+    this.feedUrl,
   });
 
   final String id;
-  final String googleAccountEmail;
+  final String sourceType;
+  final String? googleAccountEmail;
+  final String? feedUrl;
   final String nickname;
   final String color;
+
+  bool get isGoogle => sourceType == 'google';
+  bool get isIcs => sourceType == 'ics';
+
+  String get subtitle {
+    if (isGoogle) return googleAccountEmail ?? '';
+    return _shortFeedUrl(feedUrl ?? 'Calendar sync link');
+  }
 
   factory CalendarConnection.fromJson(Map<String, dynamic> json) {
     return CalendarConnection(
       id: json['id'] as String,
-      googleAccountEmail: json['google_account_email'] as String,
+      sourceType: json['source_type'] as String? ?? 'google',
+      googleAccountEmail: json['google_account_email'] as String?,
+      feedUrl: json['feed_url'] as String?,
       nickname: json['nickname'] as String? ?? 'Calendar',
       color: json['color'] as String? ?? '#4285F4',
     );
   }
+}
+
+String _shortFeedUrl(String url) {
+  if (url.length <= 48) return url;
+  return '${url.substring(0, 45)}…';
 }

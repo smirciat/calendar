@@ -25,7 +25,8 @@ eventsRouter.get('/', requireFamilyOrDeviceAuth, async (req, res) => {
        e.all_day,
        c.nickname,
        c.color,
-       c.google_account_email
+       c.google_account_email,
+       c.source_type
      FROM events e
      JOIN calendar_connections c ON c.id = e.calendar_connection_id
      WHERE c.family_id = $1

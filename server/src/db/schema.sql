@@ -10,14 +10,34 @@ CREATE TABLE IF NOT EXISTS families (
 CREATE TABLE IF NOT EXISTS calendar_connections (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   family_id UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
-  google_account_email TEXT NOT NULL,
-  refresh_token_encrypted TEXT NOT NULL,
+  source_type TEXT NOT NULL DEFAULT 'google',
+  google_account_email TEXT,
+  refresh_token_encrypted TEXT,
+  feed_url TEXT,
   nickname TEXT NOT NULL DEFAULT 'Calendar',
   color TEXT NOT NULL DEFAULT '#4285F4',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   last_synced_at TIMESTAMPTZ,
-  UNIQUE (family_id, google_account_email)
+  CONSTRAINT calendar_connections_source_check CHECK (
+    (source_type = 'google'
+      AND google_account_email IS NOT NULL
+      AND refresh_token_encrypted IS NOT NULL
+      AND feed_url IS NULL)
+    OR
+    (source_type = 'ics'
+      AND feed_url IS NOT NULL
+      AND google_account_email IS NULL
+      AND refresh_token_encrypted IS NULL)
+  )
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_calendar_connections_google
+  ON calendar_connections (family_id, google_account_email)
+  WHERE source_type = 'google';
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_calendar_connections_ics
+  ON calendar_connections (family_id, feed_url)
+  WHERE source_type = 'ics';
 
 CREATE TABLE IF NOT EXISTS events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
