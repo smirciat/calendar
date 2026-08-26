@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'package:family_calendar/models/calendar_models.dart';
+import 'package:family_calendar/utils/calendar_event_utils.dart';
 
 class CalendarGrid extends StatelessWidget {
   const CalendarGrid({
@@ -16,14 +17,6 @@ class CalendarGrid extends StatelessWidget {
   final List<CalendarEvent> events;
   final void Function(DateTime day, List<CalendarEvent> dayEvents) onDayTap;
   final bool compact;
-
-  List<CalendarEvent> _eventsForDay(DateTime day) {
-    final start = DateTime(day.year, day.month, day.day);
-    final end = start.add(const Duration(days: 1));
-    return events.where((event) {
-      return event.startAt.isBefore(end) && event.endAt.isAfter(start);
-    }).toList();
-  }
 
   Color _parseColor(String hex) {
     final value = hex.replaceFirst('#', '');
@@ -59,7 +52,8 @@ class CalendarGrid extends StatelessWidget {
               return Expanded(
                 child: Row(
                   children: week.map((day) {
-                    final dayEvents = _eventsForDay(day);
+                    final dayEvents = eventsForDay(events, day);
+                    final dayGroups = groupDuplicateEvents(dayEvents);
                     final isToday = DateUtils.isSameDay(day, DateTime.now());
                     return Expanded(
                       child: InkWell(
@@ -88,9 +82,10 @@ class CalendarGrid extends StatelessWidget {
                               const SizedBox(height: 4),
                               Expanded(
                                 child: ListView(
-                                  children: dayEvents.take(compact ? 2 : 4).map((
-                                    event,
-                                  ) {
+                                  children: dayGroups
+                                      .take(compact ? 2 : 4)
+                                      .map((group) {
+                                    final event = group.primary;
                                     return Container(
                                       margin: const EdgeInsets.only(bottom: 2),
                                       padding: const EdgeInsets.symmetric(
@@ -103,13 +98,32 @@ class CalendarGrid extends StatelessWidget {
                                         ).withValues(alpha: 0.2),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
-                                      child: Text(
-                                        event.title,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.labelSmall,
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              event.title,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: Theme.of(
+                                                context,
+                                              ).textTheme.labelSmall,
+                                            ),
+                                          ),
+                                          if (group.hasDuplicates)
+                                            Text(
+                                              '+${group.duplicateCount}',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .labelSmall
+                                                  ?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .primary,
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                     );
                                   }).toList(),
