@@ -73,9 +73,7 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
   }
 
   bool _isSameWeek(DateTime a, DateTime b) {
-    final mondayA = a.subtract(Duration(days: a.weekday - 1));
-    final mondayB = b.subtract(Duration(days: b.weekday - 1));
-    return DateUtils.isSameDay(mondayA, mondayB);
+    return DateUtils.isSameDay(weekStartSunday(a), weekStartSunday(b));
   }
 
   void _resetIdleTimer() {

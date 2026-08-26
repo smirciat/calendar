@@ -28,7 +28,7 @@ void main() {
     final weeks = buildWeekGrid(anchor: DateTime(2026, 8, 26), weekCount: 5);
     expect(weeks.length, 5);
     expect(weeks.first.length, 7);
-    expect(weeks.first.first.weekday, DateTime.monday);
+    expect(weeks.first.first.weekday, DateTime.sunday);
   });
 
   test('all-day events match by calendar date not local timezone', () {

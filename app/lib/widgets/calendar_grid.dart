@@ -29,7 +29,7 @@ class CalendarGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     final headerStyle = Theme.of(context).textTheme.titleSmall;
     final dayNumberStyle = compact
         ? Theme.of(context).textTheme.bodyMedium
@@ -271,14 +271,19 @@ class _EventChip extends StatelessWidget {
 }
 
 List<List<DateTime>> buildWeekGrid({required DateTime anchor, int weekCount = 5}) {
-  final monday = anchor.subtract(Duration(days: anchor.weekday - 1));
+  final sunday = weekStartSunday(anchor);
   return List.generate(weekCount, (weekIndex) {
     return List.generate(7, (dayIndex) {
       return DateTime(
-        monday.year,
-        monday.month,
-        monday.day + weekIndex * 7 + dayIndex,
+        sunday.year,
+        sunday.month,
+        sunday.day + weekIndex * 7 + dayIndex,
       );
     });
   });
+}
+
+DateTime weekStartSunday(DateTime date) {
+  final day = DateTime(date.year, date.month, date.day);
+  return day.subtract(Duration(days: day.weekday % 7));
 }
