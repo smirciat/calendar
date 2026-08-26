@@ -7,7 +7,7 @@ Flutter + Node family wall calendar. Phones manage Google accounts; the wall kio
 | **mobile** | `com.smircich.familycalendar` | `app-mobile-release.apk` | Firebase App Distribution (phones) |
 | **kiosk** | `com.smircich.familycalendar.kiosk` | `app-kiosk-release.apk` | ADB sideload (wall tablet) |
 
-Version is set in `app/pubspec.yaml` (`version: 1.0.0+3` → name `1.0.0`, build number `3`).
+Version is set in `app/pubspec.yaml` (`version: 1.0.0+5` → name `1.0.0`, build number `5`).
 
 See `AGENTS.md` for architecture and server setup.
 
@@ -15,12 +15,14 @@ See `AGENTS.md` for architecture and server setup.
 
 - Flutter SDK (with Android toolchain)
 - **Windows:** run `.bat` scripts from `app/scripts/` (safe from any directory)
-- **Firebase (mobile):** `npm install -g firebase-tools` then `firebase login`
+- **Firebase (mobile):** Node.js + `npx firebase-tools login` (or `npm install -g firebase-tools`)
+- **iOS (phones):** Mac with Xcode, Apple Distribution cert, Ad Hoc devices registered
 - **Kiosk (wall):** `adb` in PATH, USB debugging on tablet
 - **`.env`** at repo root with at least:
 
 ```env
 ANDROID_APP_ID=1:YOUR_PROJECT:android:YOUR_APP_HASH
+IOS_APP_ID=1:YOUR_PROJECT:ios:YOUR_APP_HASH
 FIREBASE_TESTERS_GROUP=family
 ```
 
@@ -59,6 +61,36 @@ Reads `ANDROID_APP_ID` and `FIREBASE_TESTERS_GROUP` from `.env`. Refuses kiosk A
 ```cmd
 app\scripts\mobile-release.bat "Release notes here"
 ```
+
+## Mobile (phones) — macOS / iOS
+
+Scripts in `app/scripts/`. Requires Xcode signing (Runner → Automatically manage signing).
+
+One-time Firebase login (uses `npx` if `firebase` is not global):
+
+```bash
+npx firebase-tools login
+```
+
+### Build + upload (first time and each release)
+
+```bash
+chmod +x app/scripts/*.sh   # once, after clone
+app/scripts/ios-release.sh "First iOS family build"
+```
+
+### Step by step
+
+```bash
+app/scripts/build-ios.sh
+app/scripts/distribute-ios.sh "Release notes here"
+```
+
+Reads `IOS_APP_ID` and `FIREBASE_TESTERS_GROUP` from `.env`.
+
+Output: `app/build/ios/ipa/*.ipa` (Ad Hoc, bundle `com.familycalendar.familyCalendar`).
+
+**Before first build:** register App ID + family iPhone UDIDs in Apple Developer; create iOS app in Firebase with the same bundle ID.
 
 ## Kiosk (wall tablet) — Windows
 
@@ -127,15 +159,18 @@ flutter build apk --flavor kiosk -t lib/main_kiosk.dart --release
 adb install -r build\app\outputs\flutter-apk\app-kiosk-release.apk
 ```
 
-Bump build number in `app/pubspec.yaml` before each distro upload (e.g. `1.0.0+4`).
+Bump build number in `app/pubspec.yaml` before each distro upload (e.g. `1.0.0+6`).
 
 ## Script reference
 
 | Script | Purpose |
 |--------|---------|
-| `app/scripts/build-mobile.bat` | Build phone APK |
+| `app/scripts/build-mobile.bat` | Build phone APK (Android) |
 | `app/scripts/distribute-mobile.bat` | Upload phone APK to Firebase |
-| `app/scripts/mobile-release.bat` | Build + upload phone APK |
+| `app/scripts/mobile-release.bat` | Build + upload phone APK (Android) |
+| `app/scripts/build-ios.sh` | Build phone IPA (iOS) |
+| `app/scripts/distribute-ios.sh` | Upload phone IPA to Firebase |
+| `app/scripts/ios-release.sh` | Build + upload phone IPA (iOS) |
 | `app/scripts/build-kiosk.bat` | Build wall APK |
 | `app/scripts/kiosk-setup.bat` | ADB install + HOME launcher setup (Windows) |
 | `app/scripts/kiosk-setup.sh` | Same for Linux/macOS |
