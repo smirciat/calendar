@@ -15,7 +15,10 @@ function oauthClient() {
   );
 }
 
-const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
+const SCOPES = [
+  'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/userinfo.email',
+];
 
 calendarsRouter.get('/', requireFamilyAuth, async (req, res) => {
   const result = await pool.query(
@@ -74,37 +77,42 @@ calendarsRouter.get('/oauth/callback', async (req, res) => {
     return;
   }
 
-  const client = oauthClient();
-  const { tokens } = await client.getToken(code);
-  if (!tokens.refresh_token) {
-    res.status(400).send('No refresh token received; try again with consent');
-    return;
+  try {
+    const client = oauthClient();
+    const { tokens } = await client.getToken(code);
+    if (!tokens.refresh_token) {
+      res.status(400).send('No refresh token received; try again with consent');
+      return;
+    }
+
+    client.setCredentials(tokens);
+    const oauth2 = google.oauth2({ version: 'v2', auth: client });
+    const profile = await oauth2.userinfo.get();
+    const email = profile.data.email;
+    if (!email) {
+      res.status(400).send('Could not read Google account email');
+      return;
+    }
+
+    const encrypted = encrypt(tokens.refresh_token);
+    const nickname = email.split('@')[0];
+
+    await pool.query(
+      `INSERT INTO calendar_connections
+        (family_id, google_account_email, refresh_token_encrypted, nickname)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (family_id, google_account_email)
+       DO UPDATE SET refresh_token_encrypted = EXCLUDED.refresh_token_encrypted`,
+      [familyId, email, encrypted, nickname],
+    );
+
+    res.send(
+      '<html><body><h2>Calendar linked</h2><p>You can close this window and return to the app.</p></body></html>',
+    );
+  } catch (error) {
+    console.error('OAuth callback failed:', error);
+    res.status(500).send('Failed to link calendar. Check server logs and try again.');
   }
-
-  client.setCredentials(tokens);
-  const oauth2 = google.oauth2({ version: 'v2', auth: client });
-  const profile = await oauth2.userinfo.get();
-  const email = profile.data.email;
-  if (!email) {
-    res.status(400).send('Could not read Google account email');
-    return;
-  }
-
-  const encrypted = encrypt(tokens.refresh_token);
-  const nickname = email.split('@')[0];
-
-  await pool.query(
-    `INSERT INTO calendar_connections
-      (family_id, google_account_email, refresh_token_encrypted, nickname)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (family_id, google_account_email)
-     DO UPDATE SET refresh_token_encrypted = EXCLUDED.refresh_token_encrypted`,
-    [familyId, email, encrypted, nickname],
-  );
-
-  res.send(
-    '<html><body><h2>Calendar linked</h2><p>You can close this window and return to the app.</p></body></html>',
-  );
 });
 
 export async function listGoogleEventsForConnection(connectionId: string): Promise<void> {

@@ -25,4 +25,10 @@ server {
         proxy_pass http://127.0.0.1:3847/health;
         proxy_set_header Host $host;
     }
+
+    location /legal/ {
+        proxy_pass http://127.0.0.1:3847;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
 }

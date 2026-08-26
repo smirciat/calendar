@@ -7,6 +7,7 @@ import { calendarsRouter } from './routes/calendars.js';
 import { devicesRouter } from './routes/devices.js';
 import { eventsRouter } from './routes/events.js';
 import { healthRouter } from './routes/health.js';
+import { legalRouter } from './routes/legal.js';
 import { startSyncScheduler, stopSyncScheduler } from './services/sync.js';
 
 async function main(): Promise<void> {
@@ -17,6 +18,7 @@ async function main(): Promise<void> {
   app.use(express.json());
 
   app.use(healthRouter);
+  app.use(legalRouter);
   app.use('/api/v1/auth', authRouter);
   app.use('/api/v1/devices', devicesRouter);
   app.use('/api/v1/calendars', calendarsRouter);
