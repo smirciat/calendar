@@ -7,7 +7,6 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APK_PATH="${SCRIPT_DIR}/../build/app/outputs/flutter-apk/app-kiosk-release.apk"
 
 TO_REMOVE=(
-  "com.fujia.calendar"
   "com.familycalendar.family_calendar"
   "com.familycalendar.family_calendar.mobile"
   "${KIOSK_PKG}"
@@ -28,7 +27,8 @@ adb shell pm list packages familycalendar || true
 adb shell pm list packages calendar || true
 
 echo
-echo "Will uninstall for user 0:"
+echo "Will NOT touch com.fujia.calendar (keep on Fujia tablets)."
+printf 'Will uninstall for user 0:\n'
 printf '  - %s\n' "${TO_REMOVE[@]}"
 echo
 read -r -p "Continue? [y/N] " CONFIRM
@@ -37,12 +37,7 @@ read -r -p "Continue? [y/N] " CONFIRM
 echo
 for pkg in "${TO_REMOVE[@]}"; do
   echo "--- Uninstalling ${pkg} ---"
-  if ! adb shell pm uninstall --user 0 "${pkg}"; then
-    if [[ "$pkg" == "com.fujia.calendar" ]]; then
-      echo "Trying disable for Fujia..."
-      adb shell pm disable-user --user 0 "${pkg}" || true
-    fi
-  fi
+  adb shell pm uninstall --user 0 "${pkg}" || true
 done
 
 echo

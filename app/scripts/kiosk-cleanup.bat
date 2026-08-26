@@ -33,22 +33,16 @@ adb shell pm list packages calendar
 
 echo.
 echo This script will UNINSTALL for user 0:
-echo   - com.fujia.calendar          (old Fujia eCalendar)
 echo   - com.familycalendar.family_calendar       (wrong build, if present)
 echo   - com.familycalendar.family_calendar.mobile (mobile flavor, if present)
+echo   - com.familycalendar.family_calendar.kiosk  (then reinstall fresh)
 echo.
-echo It will KEEP (or reinstall):
-echo   - %KIOSK_PKG%
+echo It will NOT touch com.fujia.calendar (keep installed on Fujia tablets).
 echo.
 set /p CONFIRM=Continue? [y/N]:
 if /i not "%CONFIRM%"=="y" goto :done
 
 echo.
-echo --- Uninstalling old Fujia calendar ---
-adb shell pm uninstall --user 0 com.fujia.calendar
-if errorlevel 1 echo   ^(may be system app - trying disable instead^)
-adb shell pm disable-user --user 0 com.fujia.calendar 2>nul
-
 echo --- Uninstalling non-kiosk Family Calendar builds ---
 adb shell pm uninstall --user 0 com.familycalendar.family_calendar
 adb shell pm uninstall --user 0 com.familycalendar.family_calendar.mobile

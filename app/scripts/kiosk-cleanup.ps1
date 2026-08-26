@@ -6,7 +6,6 @@ $ErrorActionPreference = "Continue"
 $KioskPkg = "com.familycalendar.family_calendar.kiosk"
 $ApkPath = Join-Path $PSScriptRoot "..\build\app\outputs\flutter-apk\app-kiosk-release.apk"
 $ToRemove = @(
-    "com.fujia.calendar",
     "com.familycalendar.family_calendar",
     "com.familycalendar.family_calendar.mobile",
     $KioskPkg
@@ -38,7 +37,7 @@ Invoke-Adb "shell pm list packages familycalendar"
 Invoke-Adb "shell pm list packages calendar"
 
 Write-Host ""
-Write-Host "Will uninstall for user 0:" -ForegroundColor Yellow
+Write-Host "Will NOT touch com.fujia.calendar (keep on Fujia tablets)." -ForegroundColor Cyan
 $ToRemove | ForEach-Object { Write-Host "  - $_" }
 Write-Host ""
 $confirm = Read-Host "Continue? [y/N]"
@@ -48,10 +47,6 @@ Write-Host ""
 foreach ($pkg in $ToRemove) {
     Write-Host "--- Uninstalling $pkg ---"
     Invoke-Adb "shell pm uninstall --user 0 $pkg"
-    if ($pkg -eq "com.fujia.calendar" -and $LASTEXITCODE -ne 0) {
-        Write-Host "Trying disable for Fujia..."
-        Invoke-Adb "shell pm disable-user --user 0 $pkg"
-    }
 }
 
 Write-Host ""
