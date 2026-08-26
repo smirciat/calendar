@@ -66,4 +66,42 @@ void main() {
     expect(groups.first.duplicateCount, 1);
     expect(groups.last.events.length, 1);
   });
+
+  test('multi-day all-day events span multiple days', () {
+    final trip = _event(
+      id: '1',
+      title: 'Trip',
+      startAt: DateTime.utc(2026, 8, 26),
+      endAt: DateTime.utc(2026, 8, 29),
+      allDay: true,
+    );
+
+    expect(eventSpansMultipleDays(trip), isTrue);
+    expect(
+      eventOccursOnDay(trip, DateTime(2026, 8, 27)),
+      isTrue,
+    );
+  });
+
+  test('layoutWeekSpans connects across columns in a week', () {
+    final trip = _event(
+      id: '1',
+      title: 'Trip',
+      startAt: DateTime.utc(2026, 8, 25),
+      endAt: DateTime.utc(2026, 8, 28),
+      allDay: true,
+    );
+    final week = List.generate(
+      7,
+      (index) => DateTime(2026, 8, 25 + index),
+    );
+
+    final segments = layoutWeekSpans(week, groupDuplicateEvents([trip]));
+
+    expect(segments.length, 1);
+    expect(segments.first.startColumn, 0);
+    expect(segments.first.endColumn, 2);
+    expect(segments.first.continuesAfter, isFalse);
+    expect(segments.first.showTitle, isTrue);
+  });
 }
