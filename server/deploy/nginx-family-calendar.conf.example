@@ -1,0 +1,28 @@
+# Family Calendar API — nginx reverse proxy
+#
+# Node listens on PORT=3847 (127.0.0.1 only recommended). Do NOT forward 3847 on WAN.
+# HTTPS: nginx on smircich.ddns.net:443 proxies /api/ to localhost:3847
+#
+# Install: copy into your nginx sites-available and symlink sites-enabled.
+
+server {
+    listen 443 ssl;
+    server_name smircich.ddns.net;
+
+    # ssl_certificate /path/to/fullchain.pem;
+    # ssl_certificate_key /path/to/privkey.pem;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:3847;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location = /health {
+        proxy_pass http://127.0.0.1:3847/health;
+        proxy_set_header Host $host;
+    }
+}

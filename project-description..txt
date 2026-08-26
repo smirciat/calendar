@@ -1,0 +1,39 @@
+This will be a flutter+node app to replace a family calendar app that has been disappointing so far and we want to either return the device or replace the software.
+
+Current solution:
+    1. Kiosk wallmounted android 10 device, 1080x1920 resolution, developer options and usb debugging enabled
+        a. Runs pre-installed eCalendar app that displays monthly calendar that reselmbes google calendar
+        b. Limitations of the software are does not display a while month, does not display a split month, does not consistently diaplay enabled calendars
+        c. Access to android settings is acheived
+    2. Personal devices and Google Calendar accounts
+        a. Mix of iOS and Android phones
+        b. Everyone has at least 1 google calendar account, some may have 2 (work and personal)
+        c. Display family events in one location on the wall and additionally on their phones
+
+
+Desired solution:
+    1. Display on wall device   
+        a. Seven day "columns" and 5 week "rows" fit on screen
+        b. Default to current week at top of screen, splitting the month most of the time
+        c. Scrollable forward and back, but after a timeout, reverts to default view
+        d. Click on a day to reveal day popup with additional details
+        e. Read only
+        f. Landscape orientation
+        g. load via adb sideload
+    2. On phones
+        a. Similar calendar view but optimized for portrait/mobile view, click to view day
+        b. Add own google account to family set by giving permissions
+        c. Color code each calendar and give nickname (like "Dad","Mom","Cody")
+        d. Load via firebase App Distro
+    3. Node server
+        a. on "bering-dev" in Oregon
+        b. pm2 once developed
+        c. Node 24
+        d. Postgres available if needed
+        e. Simple security /password login with logn lasting tokens
+        f. Not on any stores, distributed within the family
+
+Resources already setup:
+    1. bering-dev linux server with node 24 and Postgres
+    2. Phones and wall mounted Kiosk
+    3. Google accounts with calendars set up

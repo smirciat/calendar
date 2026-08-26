@@ -1,0 +1,29 @@
+---
+description: Family calendar project context and architecture
+alwaysApply: true
+---
+
+# Family Calendar Project
+
+Flutter + Node 24 app replacing a wall kiosk eCalendar. Read `project-description..txt` and `AGENTS.md` for full context.
+
+## Stack
+
+- **app/** — Flutter, two flavors: `kiosk` (landscape, read-only, ADB) and `mobile` (portrait, Firebase App Distro)
+- **server/** — Node 24 on bering-dev, PM2, Postgres, `/api/v1` routes
+- **Auth** — Password + long-lived JWT; kiosk uses device token; Google OAuth only on mobile
+
+## Non-negotiables
+
+- Kiosk never calls Google APIs directly — server aggregates calendars
+- Wall: 7×5 grid, current week at top, scroll with idle reset, day tap popup, landscape only
+- Phones: link Google accounts, nickname + color per calendar; all views read-only
+- One shared family password; kiosk pairs via server URL + 6-char code from mobile
+- Google sync: poll every 1 minute on server
+- Family-only distribution; no app stores
+
+## When adding features
+
+1. Check product constraints in `project-description..txt`
+2. Prefer server-side sync/cache over client-side Google calls
+3. Keep kiosk and mobile in one Flutter project via flavors, not duplicate apps

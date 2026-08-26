@@ -1,0 +1,37 @@
+---
+description: Node server API, auth, and Google Calendar sync
+globs: server/**/*
+alwaysApply: false
+---
+
+# Node Server
+
+## Runtime
+
+- Node 24, TypeScript, deploy on bering-dev with PM2
+- Postgres for families, users, calendar connections, event cache, devices
+- All routes under `/api/v1`
+
+## Auth
+
+- Password login → long-lived JWT (refresh optional)
+- Kiosk: device registration endpoint → device-scoped token
+- Never log or return Google refresh tokens in API responses
+
+## Google Calendar
+
+- OAuth initiated from mobile; callback handled by server
+- Store refresh tokens encrypted; sync job normalizes events into cache
+- Support multiple calendars per user with `nickname` and `color` fields
+
+## API shape (initial)
+
+- `POST /auth/login`, `POST /auth/register` (family setup)
+- `GET/POST /calendars` — linked accounts, nicknames, colors
+- `GET /events?from=&to=` — merged family events
+- `POST /devices` — register kiosk, issue device token
+
+## Config
+
+- Single `.env` at **project root** (see `.env-sample`); server builds `DATABASE_URL` from `POSTGRES_*`
+- Default `PORT=3847` (LAN-only, not WAN-forwarded); nginx on `smircich.ddns.net:443` proxies `/api/` to Node

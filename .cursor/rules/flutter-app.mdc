@@ -1,0 +1,31 @@
+---
+description: Flutter app conventions for kiosk and mobile flavors
+globs: app/**/*
+alwaysApply: false
+---
+
+# Flutter App
+
+## Flavors
+
+- `kiosk` — landscape lock, no Google OAuth UI, device token auth, read-only grid
+- `mobile` — portrait, login, Google link flow, calendar nickname/color settings
+
+Use `--flavor kiosk` / `--flavor mobile` and separate `main_kiosk.dart` / `main_mobile.dart` if needed.
+
+## Calendar grid
+
+- 7 day columns, 5 week rows on kiosk (1080×1920 landscape)
+- Default: current week at top (split-month)
+- Horizontal scroll through weeks; idle timeout reverts to default
+- Tap day → modal/bottom sheet with events (read-only on kiosk)
+
+## Data
+
+- Fetch events from server API by date range; do not embed Google client credentials
+- Color-code events by calendar nickname from server metadata
+
+## Distribution
+
+- Kiosk: release APK, sideload via ADB
+- Mobile: Firebase App Distribution (document flavor in build scripts)
