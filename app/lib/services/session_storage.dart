@@ -44,4 +44,16 @@ class SessionStorage {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_deviceTokenKey);
   }
+
+  static const _kioskWeekRowsKey = 'kiosk_week_rows';
+
+  Future<int> getKioskWeekRows() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_kioskWeekRowsKey) ?? 5;
+  }
+
+  Future<void> setKioskWeekRows(int value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_kioskWeekRowsKey, value);
+  }
 }

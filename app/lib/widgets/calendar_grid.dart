@@ -11,15 +11,26 @@ class CalendarGrid extends StatelessWidget {
     required this.events,
     required this.onDayTap,
     this.compact = false,
+    this.weekRowCount = 5,
   });
 
   final List<List<DateTime>> weeks;
   final List<CalendarEvent> events;
   final void Function(DateTime day, List<CalendarEvent> dayEvents) onDayTap;
   final bool compact;
+  final int weekRowCount;
 
   static const _cellMargin = 2.0;
-  static const _laneHeight = 18.0;
+  static const _baseLaneHeight = 18.0;
+
+  double get _densityScale => compact ? 1.0 : (5 / weekRowCount).clamp(1.0, 2.5);
+
+  double get _laneHeight => _baseLaneHeight * _densityScale;
+
+  TextStyle? _scaledStyle(BuildContext context, TextStyle? base) {
+    if (base == null) return null;
+    return base.copyWith(fontSize: (base.fontSize ?? 14) * _densityScale);
+  }
 
   Color _parseColor(String hex) {
     final value = hex.replaceFirst('#', '');
@@ -30,12 +41,13 @@ class CalendarGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    final headerStyle = Theme.of(context).textTheme.titleSmall;
+    final headerStyle = _scaledStyle(context, Theme.of(context).textTheme.titleSmall);
     final dayNumberStyle = compact
         ? Theme.of(context).textTheme.bodyMedium
-        : Theme.of(context).textTheme.titleMedium;
-    final maxSpanLanes = compact ? 2 : 3;
-    final maxSingleDayGroups = compact ? 2 : 4;
+        : _scaledStyle(context, Theme.of(context).textTheme.titleMedium);
+    final maxSpanLanes = compact ? 2 : (2 + weekRowCount).clamp(3, 5);
+    final maxSingleDayGroups = compact ? 2 : (weekRowCount + 1).clamp(4, 8);
+    final cellPadding = compact ? 6.0 : 6.0 * _densityScale;
 
     return Column(
       children: [
@@ -67,6 +79,9 @@ class CalendarGrid extends StatelessWidget {
               return Expanded(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
+                    final dateHeaderHeight =
+                        (dayNumberStyle?.fontSize ?? 16) + cellPadding * 2;
+
                     return Stack(
                       children: [
                         Row(
@@ -92,7 +107,7 @@ class CalendarGrid extends StatelessWidget {
                                     ),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  padding: const EdgeInsets.all(6),
+                                  padding: EdgeInsets.all(cellPadding),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
@@ -111,6 +126,7 @@ class CalendarGrid extends StatelessWidget {
                                               .map((group) => _EventChip(
                                                 group: group,
                                                 parseColor: _parseColor,
+                                                fontScale: _densityScale,
                                               ))
                                               .toList(),
                                         ),
@@ -124,7 +140,7 @@ class CalendarGrid extends StatelessWidget {
                         ),
                         if (spanBandHeight > 0)
                           Positioned(
-                            top: 28,
+                            top: dateHeaderHeight,
                             left: 0,
                             right: 0,
                             height: spanBandHeight,
@@ -136,6 +152,7 @@ class CalendarGrid extends StatelessWidget {
                               laneHeight: _laneHeight,
                               cellMargin: _cellMargin,
                               parseColor: _parseColor,
+                              fontScale: _densityScale,
                             ),
                           ),
                       ],
@@ -158,6 +175,7 @@ class _WeekSpanLayer extends StatelessWidget {
     required this.laneHeight,
     required this.cellMargin,
     required this.parseColor,
+    required this.fontScale,
   });
 
   final double weekWidth;
@@ -165,6 +183,7 @@ class _WeekSpanLayer extends StatelessWidget {
   final double laneHeight;
   final double cellMargin;
   final Color Function(String hex) parseColor;
+  final double fontScale;
 
   @override
   Widget build(BuildContext context) {
@@ -188,7 +207,7 @@ class _WeekSpanLayer extends StatelessWidget {
           width: width.clamp(0, double.infinity),
           height: laneHeight - 2,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+            padding: EdgeInsets.symmetric(horizontal: 4 * fontScale),
             alignment: Alignment.centerLeft,
             decoration: BoxDecoration(
               color: parseColor(event.color).withValues(alpha: 0.35),
@@ -205,7 +224,10 @@ class _WeekSpanLayer extends StatelessWidget {
                           event.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.labelSmall,
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            fontSize: (Theme.of(context).textTheme.labelSmall?.fontSize ?? 11) *
+                                fontScale,
+                          ),
                         ),
                       ),
                       if (segment.group.hasDuplicates)
@@ -214,6 +236,8 @@ class _WeekSpanLayer extends StatelessWidget {
                           style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: Theme.of(context).colorScheme.primary,
+                            fontSize: (Theme.of(context).textTheme.labelSmall?.fontSize ?? 11) *
+                                fontScale,
                           ),
                         ),
                     ],
@@ -230,10 +254,12 @@ class _EventChip extends StatelessWidget {
   const _EventChip({
     required this.group,
     required this.parseColor,
+    this.fontScale = 1.0,
   });
 
   final EventDisplayGroup group;
   final Color Function(String hex) parseColor;
+  final double fontScale;
 
   @override
   Widget build(BuildContext context) {
@@ -241,7 +267,7 @@ class _EventChip extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 2),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      padding: EdgeInsets.symmetric(horizontal: 4 * fontScale, vertical: 2 * fontScale),
       decoration: BoxDecoration(
         color: parseColor(event.color).withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(4),
@@ -253,7 +279,9 @@ class _EventChip extends StatelessWidget {
               event.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontSize: (Theme.of(context).textTheme.labelSmall?.fontSize ?? 11) * fontScale,
+              ),
             ),
           ),
           if (group.hasDuplicates)
@@ -262,6 +290,7 @@ class _EventChip extends StatelessWidget {
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.primary,
+                fontSize: (Theme.of(context).textTheme.labelSmall?.fontSize ?? 11) * fontScale,
               ),
             ),
         ],

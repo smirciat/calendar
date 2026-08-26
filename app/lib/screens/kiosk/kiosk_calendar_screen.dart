@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:family_calendar/models/calendar_models.dart';
 import 'package:family_calendar/services/api_client.dart';
+import 'package:family_calendar/services/session_storage.dart';
 import 'package:family_calendar/widgets/calendar_grid.dart';
 import 'package:family_calendar/widgets/day_detail_sheet.dart';
 
@@ -24,6 +25,8 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
   List<CalendarEvent> _events = [];
   bool _eventsLoading = true;
   String? _error;
+  int _weekRows = 5;
+  final _storage = SessionStorage();
   Timer? _idleTimer;
   Timer? _clockSyncTimer;
   bool _initialAnchorChecked = false;
@@ -33,6 +36,7 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _syncAnchorToNow());
+    _loadWeekRows();
     _clockSyncTimer = Timer(const Duration(seconds: 5), () {
       if (!mounted) return;
       _syncAnchorToNow(reloadEvents: true);
@@ -54,6 +58,23 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
     if (state == AppLifecycleState.resumed) {
       _syncAnchorToNow(reloadEvents: true);
     }
+  }
+
+  Future<void> _loadWeekRows() async {
+    final rows = await _storage.getKioskWeekRows();
+    if (!mounted) return;
+    if (rows != _weekRows) {
+      setState(() => _weekRows = rows);
+      _loadEvents();
+    }
+  }
+
+  Future<void> _setWeekRows(int rows) async {
+    if (rows == _weekRows) return;
+    _onUserInteraction();
+    setState(() => _weekRows = rows);
+    await _storage.setKioskWeekRows(rows);
+    _loadEvents();
   }
 
   void _syncAnchorToNow({bool reloadEvents = false}) {
@@ -96,7 +117,7 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
     });
     try {
       final from = _anchor.subtract(const Duration(days: 7));
-      final to = _anchor.add(const Duration(days: 35));
+      final to = _anchor.add(Duration(days: 7 * _weekRows + 7));
       final events = await widget.api.getEvents(from: from, to: to);
       if (!mounted) return;
       setState(() => _events = events);
@@ -124,7 +145,7 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
 
   @override
   Widget build(BuildContext context) {
-    final weeks = buildWeekGrid(anchor: _anchor);
+    final weeks = buildWeekGrid(anchor: _anchor, weekCount: _weekRows);
 
     return GestureDetector(
       onTap: _onUserInteraction,
@@ -133,6 +154,24 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
         appBar: AppBar(
           title: const Text('Family Calendar'),
           actions: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<int>(
+                  value: _weekRows,
+                  alignment: Alignment.centerRight,
+                  items: const [
+                    DropdownMenuItem(value: 2, child: Text('2 rows')),
+                    DropdownMenuItem(value: 3, child: Text('3 rows')),
+                    DropdownMenuItem(value: 4, child: Text('4 rows')),
+                    DropdownMenuItem(value: 5, child: Text('5 rows')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) _setWeekRows(value);
+                  },
+                ),
+              ),
+            ),
             if (_eventsLoading)
               const Padding(
                 padding: EdgeInsets.only(right: 8),
@@ -163,6 +202,7 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
                 child: CalendarGrid(
                   weeks: weeks,
                   events: _events,
+                  weekRowCount: _weekRows,
                   onDayTap: (day, events) {
                     _onUserInteraction();
                     showDayDetailSheet(
