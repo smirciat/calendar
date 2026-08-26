@@ -94,24 +94,40 @@ calendarsRouter.get('/oauth/callback', async (req, res) => {
       return;
     }
 
+    const calendar = google.calendar({ version: 'v3', auth: client });
+    await calendar.events.list({
+      calendarId: 'primary',
+      maxResults: 1,
+      singleEvents: true,
+    });
+
     const encrypted = encrypt(tokens.refresh_token);
     const nickname = email.split('@')[0];
 
-    await pool.query(
+    const inserted = await pool.query<{ id: string }>(
       `INSERT INTO calendar_connections
         (family_id, google_account_email, refresh_token_encrypted, nickname)
        VALUES ($1, $2, $3, $4)
        ON CONFLICT (family_id, google_account_email)
-       DO UPDATE SET refresh_token_encrypted = EXCLUDED.refresh_token_encrypted`,
+       DO UPDATE SET refresh_token_encrypted = EXCLUDED.refresh_token_encrypted
+       RETURNING id`,
       [familyId, email, encrypted, nickname],
     );
+
+    void listGoogleEventsForConnection(inserted.rows[0].id).catch((error) => {
+      console.error(`Initial sync failed for ${email}:`, error);
+    });
 
     res.send(
       '<html><body><h2>Calendar linked</h2><p>You can close this window and return to the app.</p></body></html>',
     );
   } catch (error) {
     console.error('OAuth callback failed:', error);
-    res.status(500).send('Failed to link calendar. Check server logs and try again.');
+    const message =
+      error instanceof Error && error.message.includes('Insufficient Permission')
+        ? 'Calendar read permission was not granted. Remove Family Calendar at myaccount.google.com/permissions, then link again and allow calendar access.'
+        : 'Failed to link calendar. Check server logs and try again.';
+    res.status(500).send(message);
   }
 });
 

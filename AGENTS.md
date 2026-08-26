@@ -84,15 +84,24 @@ Postgres (families, users, calendar links, cached events, devices)
 
 ## Kiosk as default launcher (survives reboot)
 
-Kiosk APK registers as a **HOME** app (`src/kiosk/AndroidManifest.xml`) and relaunches on `BOOT_COMPLETED`.
+**Fujia wall tablets:** Do **not** `pm disable com.fujia.calendar` — firmware may factory-restore on reboot and **delete sideloaded apps**. Keep Fujia installed; set Family Calendar as default HOME instead.
 
-**One-time setup after sideload:**
+Setup scripts (copy `app/scripts/` to Windows build PC):
 
-```bash
-adb install -r app-kiosk-release.apk
+- **`kiosk-setup.bat`** — double-click or run in CMD (no grep, no typos)
+- **`kiosk-setup.ps1`** — PowerShell: `powershell -ExecutionPolicy Bypass -File .\kiosk-setup.ps1`
+
+The `add-role-holder` command often fails on Android 10 with a Java exception — that is normal. The script also runs `set-home-activity` and opens **Settings → Home app** for manual selection.
+
+```powershell
+# Windows — from calendar\app after building kiosk APK
+adb shell pm enable com.fujia.calendar
+adb install -r build\app\outputs\flutter-apk\app-kiosk-release.apk
+adb shell am start -n com.familycalendar.family_calendar.kiosk/com.familycalendar.family_calendar.MainActivity
+adb shell cmd role add-role-holder android.app.role.HOME com.familycalendar.family_calendar.kiosk
 adb shell cmd package set-home-activity com.familycalendar.family_calendar.kiosk/com.familycalendar.family_calendar.KioskHome
+adb shell dpm set-device-owner com.familycalendar.family_calendar.kiosk/com.familycalendar.family_calendar.KioskDeviceAdminReceiver
+adb reboot
 ```
 
-Or on device: press **Home** → choose **Family Calendar Wall** → **Always**.
-
-After that, reboots return to the calendar without developer settings.
+Use **full activity class names** (not `.MainActivity` shorthand). Device owner may require no Google account on the wall device.

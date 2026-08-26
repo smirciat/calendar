@@ -15,7 +15,14 @@ export async function syncAllCalendars(): Promise<void> {
       try {
         await listGoogleEventsForConnection(row.id);
       } catch (error) {
-        console.error(`Sync failed for calendar ${row.id}:`, error);
+        const email = await pool.query<{ google_account_email: string }>(
+          'SELECT google_account_email FROM calendar_connections WHERE id = $1',
+          [row.id],
+        );
+        console.error(
+          `Sync failed for ${email.rows[0]?.google_account_email ?? row.id}:`,
+          error,
+        );
       }
     }
   } finally {
