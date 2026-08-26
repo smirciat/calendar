@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:family_calendar/models/calendar_models.dart';
 import 'package:family_calendar/services/api_client.dart';
 import 'package:family_calendar/utils/calendar_colors.dart';
+import 'package:family_calendar/widgets/sheet_padding.dart';
 
 Future<CalendarConnection?> showEditCalendarSheet(
   BuildContext context, {
@@ -79,10 +80,8 @@ class _EditCalendarSheetState extends State<_EditCalendarSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomInset),
+      padding: modalSheetPadding(context),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

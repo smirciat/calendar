@@ -28,12 +28,65 @@ export async function listIcsEventsForConnection(connectionId: string): Promise<
   const items = parseIcsEvents(icsText, timeMin, timeMax);
   const seenUids = new Set<string>();
 
-  for (const item of items) {
-    seenUids.add(item.uid);
+  const batchSize = 100;
+  for (let offset = 0; offset < items.length; offset += batchSize) {
+    const batch = items.slice(offset, offset + batchSize);
+    for (const item of batch) {
+      seenUids.add(item.uid);
+    }
+
+    const connectionIds: string[] = [];
+    const eventIds: string[] = [];
+    const titles: string[] = [];
+    const descriptions: (string | null)[] = [];
+    const locations: (string | null)[] = [];
+    const starts: Date[] = [];
+    const ends: Date[] = [];
+    const allDays: boolean[] = [];
+
+    for (const item of batch) {
+      connectionIds.push(row.id);
+      eventIds.push(item.uid);
+      titles.push(item.title);
+      descriptions.push(item.description);
+      locations.push(item.location);
+      starts.push(item.startAt);
+      ends.push(item.endAt);
+      allDays.push(item.allDay);
+    }
+
     await pool.query(
       `INSERT INTO events
         (calendar_connection_id, google_event_id, title, description, location, start_at, end_at, all_day, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())
+       SELECT
+         calendar_connection_id,
+         google_event_id,
+         title,
+         description,
+         location,
+         start_at,
+         end_at,
+         all_day,
+         now()
+       FROM UNNEST(
+         $1::uuid[],
+         $2::text[],
+         $3::text[],
+         $4::text[],
+         $5::text[],
+         $6::timestamptz[],
+         $7::timestamptz[],
+         $8::boolean[]
+       ) AS t(
+         calendar_connection_id,
+         google_event_id,
+         title,
+         description,
+         location,
+         start_at,
+         end_at,
+         all_day
+       )
        ON CONFLICT (calendar_connection_id, google_event_id)
        DO UPDATE SET
          title = EXCLUDED.title,
@@ -44,14 +97,14 @@ export async function listIcsEventsForConnection(connectionId: string): Promise<
          all_day = EXCLUDED.all_day,
          updated_at = now()`,
       [
-        row.id,
-        item.uid,
-        item.title,
-        item.description,
-        item.location,
-        item.startAt,
-        item.endAt,
-        item.allDay,
+        connectionIds,
+        eventIds,
+        titles,
+        descriptions,
+        locations,
+        starts,
+        ends,
+        allDays,
       ],
     );
   }
@@ -73,9 +126,7 @@ export async function listIcsEventsForConnection(connectionId: string): Promise<
   );
 }
 
-export async function validateIcsFeedUrl(raw: string): Promise<string> {
+export function validateIcsFeedUrl(raw: string): string {
   validateFeedUrl(raw);
-  const normalized = normalizeFeedUrl(raw);
-  await fetchIcsText(normalized);
-  return normalized;
+  return normalizeFeedUrl(raw);
 }

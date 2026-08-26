@@ -7,7 +7,7 @@ Flutter + Node family wall calendar. Phones manage Google accounts; the wall kio
 | **mobile** | `com.smircich.familycalendar` | `app-mobile-release.apk` | Firebase App Distribution (phones) |
 | **kiosk** | `com.smircich.familycalendar.kiosk` | `app-kiosk-release.apk` | ADB sideload (wall tablet) |
 
-Version is set in `app/pubspec.yaml` (`version: 1.0.0+6` → name `1.0.0`, build number `6`).
+Version is set in `app/pubspec.yaml` (`version: 1.0.0+7` → name `1.0.0`, build number `7`).
 
 See `AGENTS.md` for architecture and server setup.
 
@@ -159,7 +159,7 @@ flutter build apk --flavor kiosk -t lib/main_kiosk.dart --release
 adb install -r build\app\outputs\flutter-apk\app-kiosk-release.apk
 ```
 
-Bump build number in `app/pubspec.yaml` before each distro upload (e.g. `1.0.0+7`).
+Bump build number in `app/pubspec.yaml` before each distro upload (e.g. `1.0.0+8`).
 
 ## Script reference
 

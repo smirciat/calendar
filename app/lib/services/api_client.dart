@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -125,17 +126,25 @@ class ApiClient {
     required String feedUrl,
     String? nickname,
   }) async {
-    final response = await http.post(
-      _uri('/api/v1/calendars/ics'),
-      headers: _headers,
-      body: jsonEncode({
-        'feedUrl': feedUrl,
-        if (nickname != null && nickname.trim().isNotEmpty)
-          'nickname': nickname.trim(),
-      }),
-    );
-    final body = await _decode(response);
-    return CalendarConnection.fromJson(body);
+    try {
+      final response = await http
+          .post(
+            _uri('/api/v1/calendars/ics'),
+            headers: _headers,
+            body: jsonEncode({
+              'feedUrl': feedUrl,
+              if (nickname != null && nickname.trim().isNotEmpty)
+                'nickname': nickname.trim(),
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+      final body = await _decode(response);
+      return CalendarConnection.fromJson(body);
+    } on TimeoutException {
+      throw ApiException(
+        'Server took too long to respond. The link may still have been saved — check Settings in a minute.',
+      );
+    }
   }
 
   Future<String> getOAuthUrl() async {

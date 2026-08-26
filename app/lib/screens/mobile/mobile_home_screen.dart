@@ -123,21 +123,16 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
       _calendars = [..._calendars, connection];
     });
 
-    try {
-      final from = DateTime.now().subtract(const Duration(days: 7));
-      final to = DateTime.now().add(const Duration(days: 28));
-      final events = await widget.api.getEvents(from: from, to: to);
-      if (!mounted) return;
-      setState(() => _events = events);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${connection.nickname} calendar added')),
-      );
-    } on ApiException catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
-    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '${connection.nickname} added — shifts sync in the background',
+        ),
+      ),
+    );
+
+    unawaited(_pollEvents());
   }
 
   Future<void> _linkGoogleCalendar() async {

@@ -68,7 +68,7 @@ calendarsRouter.post('/ics', requireFamilyAuth, async (req, res) => {
 
   let normalizedUrl: string;
   try {
-    normalizedUrl = await validateIcsFeedUrl(feedUrl);
+    normalizedUrl = validateIcsFeedUrl(feedUrl);
   } catch (error) {
     res.status(400).json({
       error: error instanceof Error ? error.message : 'Invalid calendar sync link',

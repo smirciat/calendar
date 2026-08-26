@@ -26,7 +26,10 @@ export function validateFeedUrl(raw: string): URL {
   return parsed;
 }
 
-export async function fetchIcsText(feedUrl: string): Promise<string> {
+export async function fetchIcsText(
+  feedUrl: string,
+  { timeoutMs = 30_000, maxBytes = 5 * 1024 * 1024 } = {},
+): Promise<string> {
   const normalized = normalizeFeedUrl(feedUrl);
   validateFeedUrl(normalized);
 
@@ -35,14 +38,36 @@ export async function fetchIcsText(feedUrl: string): Promise<string> {
       Accept: 'text/calendar,text/plain,*/*',
       'User-Agent': 'FamilyCalendar/1.0',
     },
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   if (!response.ok) {
     throw new Error(`Could not fetch calendar feed (${response.status})`);
   }
 
-  const text = await response.text();
+  const reader = response.body?.getReader();
+  if (!reader) {
+    const text = await response.text();
+    if (!text.includes('BEGIN:VCALENDAR')) {
+      throw new Error('Link does not look like a calendar feed');
+    }
+    return text;
+  }
+
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    totalBytes += value.byteLength;
+    if (totalBytes > maxBytes) {
+      throw new Error('Calendar feed is too large to sync');
+    }
+    chunks.push(value);
+  }
+
+  const text = Buffer.concat(chunks).toString('utf8');
   if (!text.includes('BEGIN:VCALENDAR')) {
     throw new Error('Link does not look like a calendar feed');
   }

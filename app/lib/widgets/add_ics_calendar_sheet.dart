@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:family_calendar/models/calendar_models.dart';
 import 'package:family_calendar/services/api_client.dart';
+import 'package:family_calendar/widgets/sheet_padding.dart';
 
 Future<CalendarConnection?> showAddIcsCalendarSheet(
   BuildContext context, {
@@ -70,15 +73,19 @@ class _AddIcsCalendarSheetState extends State<_AddIcsCalendarSheet> {
         _saving = false;
         _error = error.message;
       });
+    } on TimeoutException {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = 'Request timed out — check Settings to see if the link was saved.';
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomInset),
+      padding: modalSheetPadding(context),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -90,7 +97,7 @@ class _AddIcsCalendarSheetState extends State<_AddIcsCalendarSheet> {
           const SizedBox(height: 8),
           Text(
             'Paste the calendar sync or webcal link from the work scheduling app. '
-            'Shifts appear as a separate color-coded profile on the wall and phones.',
+            'The link is saved immediately; shifts appear within a minute.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 16),
