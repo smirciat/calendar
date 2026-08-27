@@ -40,11 +40,19 @@ if (-not (Get-Command scp -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
+if (-not (Get-Command ssh -ErrorAction SilentlyContinue)) {
+    Write-Host "ERROR: ssh not found. Install OpenSSH client on Windows." -ForegroundColor Red
+    exit 1
+}
+
 if (-not (Test-Path $KeystoreSrc)) {
     Write-Host "ERROR: Keystore not found at $KeystoreSrc" -ForegroundColor Red
     Write-Host "Build at least one Android APK on this PC first."
     exit 1
 }
+
+Write-Host "Creating remote folder .config/family-calendar ..."
+ssh $DeployHost "mkdir -p .config/family-calendar"
 
 Write-Host "Uploading debug keystore..."
 scp $KeystoreSrc "${DeployHost}:${RemotePath}"

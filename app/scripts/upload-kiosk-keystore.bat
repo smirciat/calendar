@@ -30,11 +30,24 @@ if errorlevel 1 (
   goto :done
 )
 
+where ssh >nul 2>&1
+if errorlevel 1 (
+  echo ERROR: ssh not found. Install OpenSSH client on Windows.
+  goto :done
+)
+
 if not exist "%KEYSTORE_SRC%" (
   echo ERROR: Keystore not found at:
   echo   %KEYSTORE_SRC%
   echo.
   echo Build at least one Android APK on this PC first, or install Android Studio.
+  goto :done
+)
+
+echo Creating remote folder .config/family-calendar ...
+ssh %KIOSK_DEPLOY_HOST% "mkdir -p .config/family-calendar"
+if errorlevel 1 (
+  echo ERROR: ssh failed. Check SSH access to %KIOSK_DEPLOY_HOST%.
   goto :done
 )
 
