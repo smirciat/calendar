@@ -7,7 +7,7 @@ Flutter + Node family wall calendar. Phones manage Google accounts; the wall kio
 | **mobile** | `com.smircich.familycalendar` | `app-mobile-release.apk` | Firebase App Distribution (phones) |
 | **kiosk** | `com.smircich.familycalendar.kiosk` | `app-kiosk-release.apk` | OTA from server (or ADB for first install) |
 
-Version is set in `app/pubspec.yaml` (`version: 1.0.1+14` → name `1.0.1`, build number `14`). Bump the name for user-visible releases (`1.0.2`, …) and the number after `+` every build.
+Version is set in `app/pubspec.yaml` (`version: 1.0.1+15` → name `1.0.1`, build number `15`). Bump the name for user-visible releases (`1.0.2`, …) and the number after `+` every build.
 
 See `AGENTS.md` for architecture and server setup.
 
@@ -37,7 +37,7 @@ Reference snippet: `server/deploy/nginx-family-calendar.conf.example`
 
 ### Publish a kiosk release (OTA)
 
-1. **Bump version** in `app/pubspec.yaml` (e.g. `1.0.1+14` → name `1.0.1`, build `14`).
+1. **Bump version** in `app/pubspec.yaml` (e.g. `1.0.1+15` → name `1.0.1`, build `15`).
 2. **Build** on a machine with Flutter: `app\scripts\build-kiosk.bat`
 3. **Copy APK** to bering-dev (no sudo — directory is owned by `andy`):
 
@@ -57,7 +57,7 @@ cp app/build/app/outputs/flutter-apk/app-kiosk-release.apk \
 
 ```env
 KIOSK_LATEST_VERSION=1.0.1
-KIOSK_LATEST_BUILD=14
+KIOSK_LATEST_BUILD=15
 KIOSK_APK_URL=https://smircich.ddns.net/releases/app-kiosk-release.apk
 KIOSK_RELEASE_NOTES=Short note shown on the wall admin screen
 ```
@@ -69,6 +69,8 @@ cd ~/calendar/server && npm run build && pm2 restart family-calendar
 ```
 
 6. **On the wall tablet:** tap **“Family Calendar” in the title bar 7 times** → **Check for updates** → **Download and install** → tap **Install** on the Android prompt.
+
+The installer briefly exits kiosk lock mode so the system prompt can appear. If prompted once, enable **Install unknown apps** for Family Calendar in Settings, then retry.
 
 Update check API: `GET /api/v1/kiosk/update?build=N` (returns `204` if already current).
 

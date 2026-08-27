@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import 'package:family_calendar/services/kiosk_update_service.dart';
@@ -77,8 +78,16 @@ class _KioskAdminSheetState extends State<_KioskAdminSheet> {
     try {
       final path = await widget.updateService.downloadApk(update.apkUrl);
       if (!mounted) return;
-      setState(() => _status = 'Starting install — tap Install on the system prompt.');
+      setState(() => _status = 'Opening Android installer…');
       await widget.updateService.installApk(path);
+      if (!mounted) return;
+      setState(
+        () => _status =
+            'If you do not see Install, check Settings → Install unknown apps for Family Calendar.',
+      );
+    } on PlatformException catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.message ?? error.code);
     } catch (error) {
       if (!mounted) return;
       setState(() => _error = error.toString());
