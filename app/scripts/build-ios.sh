@@ -23,6 +23,7 @@ fi
 
 cd "$APP_DIR"
 flutter pub get
+flutter precache --ios
 
 if [[ ! -f ios/Podfile ]]; then
   echo "ERROR: ios/Podfile missing. Pull latest calendar repo or run flutter create . --platforms=ios in app/."
