@@ -10,4 +10,5 @@ export async function migrate(): Promise<void> {
   await pool.query(schema);
   const alter = readFileSync(join(serverRoot, 'src/db/schema-alter.sql'), 'utf8');
   await pool.query(alter);
+  console.log('Database migration complete');
 }

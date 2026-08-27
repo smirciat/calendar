@@ -137,13 +137,16 @@ class ApiClient {
                 'nickname': nickname.trim(),
             }),
           )
-          .timeout(const Duration(seconds: 30));
+          .timeout(const Duration(seconds: 15));
       final body = await _decode(response);
       return CalendarConnection.fromJson(body);
     } on TimeoutException {
       throw ApiException(
-        'Server took too long to respond. The link may still have been saved — check Settings in a minute.',
+        'Server took too long — check Settings to see if the link was saved.',
       );
+    } catch (error) {
+      if (error is ApiException) rethrow;
+      throw ApiException('Could not add calendar link — try again.');
     }
   }
 

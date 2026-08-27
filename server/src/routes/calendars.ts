@@ -4,7 +4,12 @@ import { config, googleOAuthConfigured } from '../config.js';
 import { pool } from '../db/pool.js';
 import { requireFamilyAuth } from '../middleware/auth.js';
 import { decrypt, encrypt } from '../services/crypto.js';
-import { listIcsEventsForConnection, validateIcsFeedUrl } from '../services/icsSync.js';
+import { isRevokedGoogleTokenError } from '../services/syncErrors.js';
+import {
+  listIcsEventsForConnection,
+  scheduleIcsSync,
+  validateIcsFeedUrl,
+} from '../services/icsSync.js';
 
 export const calendarsRouter = Router();
 
@@ -105,11 +110,10 @@ calendarsRouter.post('/ics', requireFamilyAuth, async (req, res) => {
     [familyId, normalizedUrl, displayName, color],
   );
 
-  void listIcsEventsForConnection(inserted.rows[0].id as string).catch((error) => {
-    console.error(`Initial ICS sync failed for ${normalizedUrl}:`, error);
-  });
-
+  const connectionId = inserted.rows[0].id as string;
+  console.log(`ICS link saved (${displayName}): ${normalizedUrl}`);
   res.status(201).json(inserted.rows[0]);
+  scheduleIcsSync(connectionId);
 });
 
 calendarsRouter.patch('/:id', requireFamilyAuth, async (req, res) => {
@@ -283,7 +287,19 @@ export async function listGoogleEventsForConnection(connectionId: string): Promi
     singleEvents: true,
     orderBy: 'startTime',
     maxResults: 500,
+  }).catch((error: unknown) => {
+    if (isRevokedGoogleTokenError(error)) {
+      return null;
+    }
+    throw error;
   });
+
+  if (!response) {
+    console.error(
+      `Google token revoked for connection ${connectionId} — re-link in mobile app`,
+    );
+    return;
+  }
 
   const items = response.data.items ?? [];
   for (const item of items) {

@@ -1,4 +1,4 @@
-import ical, { type VEvent } from 'node-ical';
+import ical, { type CalendarResponse, type VEvent } from 'node-ical';
 
 export function normalizeFeedUrl(raw: string): string {
   const trimmed = raw.trim();
@@ -101,12 +101,11 @@ function eventUid(item: VEvent, fallback: string): string {
   return fallback;
 }
 
-export function parseIcsEvents(
-  icsText: string,
+function eventsFromCalendar(
+  parsed: CalendarResponse,
   timeMin: Date,
   timeMax: Date,
 ): ParsedIcsEvent[] {
-  const parsed = ical.sync.parseICS(icsText);
   const events: ParsedIcsEvent[] = [];
 
   for (const [key, item] of Object.entries(parsed)) {
@@ -141,4 +140,21 @@ export function parseIcsEvents(
   }
 
   return events;
+}
+
+export function parseIcsEvents(
+  icsText: string,
+  timeMin: Date,
+  timeMax: Date,
+): ParsedIcsEvent[] {
+  return eventsFromCalendar(ical.sync.parseICS(icsText), timeMin, timeMax);
+}
+
+export async function parseIcsEventsAsync(
+  icsText: string,
+  timeMin: Date,
+  timeMax: Date,
+): Promise<ParsedIcsEvent[]> {
+  const parsed = await ical.async.parseICS(icsText);
+  return eventsFromCalendar(parsed, timeMin, timeMax);
 }

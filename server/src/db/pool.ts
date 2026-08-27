@@ -3,4 +3,5 @@ import { config } from '../config.js';
 
 export const pool = new pg.Pool({
   connectionString: config.databaseUrl,
+  max: 20,
 });

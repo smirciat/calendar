@@ -31,14 +31,6 @@ CREATE TABLE IF NOT EXISTS calendar_connections (
   )
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_calendar_connections_google
-  ON calendar_connections (family_id, google_account_email)
-  WHERE source_type = 'google';
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_calendar_connections_ics
-  ON calendar_connections (family_id, feed_url)
-  WHERE source_type = 'ics';
-
 CREATE TABLE IF NOT EXISTS events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   calendar_connection_id UUID NOT NULL REFERENCES calendar_connections(id) ON DELETE CASCADE,

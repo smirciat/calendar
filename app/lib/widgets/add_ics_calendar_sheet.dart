@@ -79,6 +79,12 @@ class _AddIcsCalendarSheetState extends State<_AddIcsCalendarSheet> {
         _saving = false;
         _error = 'Request timed out — check Settings to see if the link was saved.';
       });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = error is ApiException ? error.message : 'Could not add calendar link';
+      });
     }
   }
 
