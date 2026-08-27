@@ -63,8 +63,20 @@ Optional override path: `EVENT_DISPLAY_RULES_PATH` in `.env`.
 
 ### Publish a kiosk release (OTA)
 
-1. **Bump version** in `app/pubspec.yaml` (e.g. `1.0.1+17` → name `1.0.1`, build `17`).
-2. **Build** on a machine with Flutter: `app\scripts\build-kiosk.bat`
+**Signing (required for OTA):** Android only allows an update when the new APK is signed with the **same key** as the installed app. Builds 15–17 were signed on Windows; build 18 from bering-dev used a different Linux debug key → the system shows **“App not installed”**.
+
+One-time setup on the build host (bering-dev):
+
+```bash
+# Copy the Windows PC debug keystore that signed the tablet's current build:
+#   scp "%USERPROFILE%\\.android\\debug.keystore" bering-dev:~/.config/family-calendar/windows-debug.keystore
+app/scripts/setup-kiosk-signing.sh --import ~/.config/family-calendar/windows-debug.keystore
+```
+
+If you switch to a **new** signing key instead, do one USB install (`kiosk-setup.bat`) before OTA works again.
+
+1. **Bump version** in `app/pubspec.yaml` (e.g. `1.0.1+18` → name `1.0.1`, build `18`).
+2. **Build** on a machine with Flutter + kiosk signing configured: `app/scripts/build-kiosk.sh` (or `build-kiosk.bat` on Windows with the same keystore imported there)
 3. **Copy APK** to bering-dev (no sudo — directory is owned by `andy`):
 
 ```bash
@@ -97,6 +109,8 @@ cd ~/calendar/server && npm run build && pm2 restart family-calendar
 6. **On the wall tablet:** tap **“Family Calendar” in the title bar 7 times** → **Check for updates** → **Download and install** → tap **Install** on the Android prompt.
 
 The installer briefly exits kiosk lock mode so the system prompt can appear. If prompted once, enable **Install unknown apps** for Family Calendar in Settings, then retry.
+
+If install fails with **“App not installed”**, the APK signing key does not match the installed app — see **Signing** above.
 
 Update check API: `GET /api/v1/kiosk/update?build=N` (returns `204` if already current).
 

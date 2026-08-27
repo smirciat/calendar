@@ -26,6 +26,12 @@ if [[ ! -d "$ANDROID_HOME/platforms" ]]; then
   echo "Run: app/scripts/setup-dev-android.sh"
   exit 1
 fi
+if [[ ! -f "$SCRIPT_DIR/../android/key.properties" ]]; then
+  echo "WARNING: android/key.properties missing — kiosk APK will use ephemeral debug signing."
+  echo "         OTA updates will fail with \"App not installed\" after the signing key changes."
+  echo "         Run: app/scripts/setup-kiosk-signing.sh --import /path/to/your/debug.keystore"
+  echo
+fi
 
 pushd "$APP_DIR" >/dev/null
 flutter pub get

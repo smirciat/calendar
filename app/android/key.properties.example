@@ -1,0 +1,6 @@
+# Copy to key.properties (gitignored) or run app/scripts/setup-kiosk-signing.sh
+# Kiosk OTA updates require every release APK to use the same signing key.
+storePassword=android
+keyPassword=android
+keyAlias=androiddebugkey
+storeFile=/home/andy/.config/family-calendar/kiosk-signing.jks
