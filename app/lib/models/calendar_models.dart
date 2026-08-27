@@ -32,8 +32,8 @@ class CalendarEvent {
     return CalendarEvent(
       id: json['id'] as String,
       title: json['title'] as String? ?? '(no title)',
-      startAt: DateTime.parse(json['start_at'] as String),
-      endAt: DateTime.parse(json['end_at'] as String),
+      startAt: _parseApiInstant(json['start_at'] as String),
+      endAt: _parseApiInstant(json['end_at'] as String),
       allDay: json['all_day'] as bool? ?? false,
       nickname: json['nickname'] as String? ?? 'Calendar',
       color: json['color'] as String? ?? '#4285F4',
@@ -43,6 +43,21 @@ class CalendarEvent {
       displayPriority: json['display_priority'] as int?,
     );
   }
+}
+
+DateTime _parseApiInstant(String raw) {
+  final parsed = DateTime.parse(raw);
+  if (parsed.isUtc) return parsed;
+  return DateTime.utc(
+    parsed.year,
+    parsed.month,
+    parsed.day,
+    parsed.hour,
+    parsed.minute,
+    parsed.second,
+    parsed.millisecond,
+    parsed.microsecond,
+  );
 }
 
 class CalendarConnection {

@@ -49,6 +49,8 @@ export const config = {
       `${required('BASE_URL', 'https://smircich.ddns.net')}/api/v1/calendars/oauth/callback`,
   },
   syncIntervalMs: Number(process.env.SYNC_INTERVAL_MS ?? 60_000),
+  /** IANA zone for family wall/phones (Oregon default). Used when parsing Google/ICS times. */
+  familyTimeZone: process.env.FAMILY_TIMEZONE ?? 'America/Los_Angeles',
   kiosk: {
     latestVersion: process.env.KIOSK_LATEST_VERSION ?? '',
     latestBuild: Number(process.env.KIOSK_LATEST_BUILD ?? 0),

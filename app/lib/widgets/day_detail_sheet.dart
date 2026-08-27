@@ -208,8 +208,8 @@ class _EventGroupTileState extends State<_EventGroupTile> {
 
   String _formatEventTime(CalendarEvent event) {
     if (event.allDay) return 'All day';
-    final start = DateFormat.jm().format(event.startAt);
-    final end = DateFormat.jm().format(event.endAt);
+    final start = DateFormat.jm().format(event.startAt.toLocal());
+    final end = DateFormat.jm().format(event.endAt.toLocal());
     return '$start – $end';
   }
 }

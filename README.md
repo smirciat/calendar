@@ -83,7 +83,7 @@ cp app/build/app/outputs/flutter-apk/app-kiosk-release.apk \
 
 ```env
 KIOSK_LATEST_VERSION=1.0.1
-KIOSK_LATEST_BUILD=17
+KIOSK_LATEST_BUILD=18
 KIOSK_APK_URL=https://smircich.ddns.net/releases/app-kiosk-release.apk
 KIOSK_RELEASE_NOTES=Short note shown on the wall admin screen
 ```
@@ -114,10 +114,9 @@ Update check API: `GET /api/v1/kiosk/update?build=N` (returns `204` if already c
 ```env
 ANDROID_APP_ID=1:YOUR_PROJECT:android:YOUR_APP_HASH
 IOS_APP_ID=1:YOUR_PROJECT:ios:YOUR_APP_HASH
-FIREBASE_TESTERS_GROUP=family
 ```
 
-Copy from `.env-sample`. Create the `family` tester group in Firebase Console → App Distribution before distributing.
+Create Firebase tester groups **`family-android`** and **`family-ios`** before distributing. Group names are hard-coded in the distribute scripts.
 
 ## Mobile (phones) — Windows
 
@@ -145,7 +144,7 @@ Verifies package `com.smircich.familycalendar` before finishing.
 app\scripts\distribute-mobile.bat "Release notes here"
 ```
 
-Reads `ANDROID_APP_ID` and `FIREBASE_TESTERS_GROUP` from `.env`. Refuses kiosk APKs.
+Reads `ANDROID_APP_ID` from `.env`. Uploads to group **`family-android`**. Refuses kiosk APKs.
 
 ### Build + upload
 
@@ -177,7 +176,7 @@ app/scripts/build-ios.sh
 app/scripts/distribute-ios.sh "Release notes here"
 ```
 
-Reads `IOS_APP_ID` and `FIREBASE_TESTERS_GROUP` from `.env`.
+Reads `IOS_APP_ID` from `.env`. Uploads to group **`family-ios`**.
 
 Output: `app/build/ios/ipa/*.ipa` (Ad Hoc, bundle `com.smircich.familycalendar`).
 

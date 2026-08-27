@@ -12,7 +12,7 @@ $ErrorActionPreference = "Stop"
 $EnvFile = Join-Path $PSScriptRoot "..\..\.env"
 $ApkPath = Join-Path $PSScriptRoot "..\build\app\outputs\flutter-apk\app-mobile-release.apk"
 $AndroidAppId = $null
-$TestersGroup = "family"
+$TestersGroup = "family-android"
 
 function Read-EnvValue([string]$Path, [string]$Key) {
     if (-not (Test-Path $Path)) { return $null }
@@ -44,8 +44,6 @@ if (-not (Test-Path $EnvFile)) {
 }
 
 $AndroidAppId = Read-EnvValue $EnvFile "ANDROID_APP_ID"
-$groupOverride = Read-EnvValue $EnvFile "FIREBASE_TESTERS_GROUP"
-if ($groupOverride) { $TestersGroup = $groupOverride }
 
 if (-not $AndroidAppId) {
     Write-Host "ERROR: ANDROID_APP_ID is missing in $EnvFile" -ForegroundColor Red

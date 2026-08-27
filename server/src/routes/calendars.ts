@@ -5,6 +5,7 @@ import { pool } from '../db/pool.js';
 import { requireFamilyAuth } from '../middleware/auth.js';
 import { decrypt, encrypt } from '../services/crypto.js';
 import { isRevokedGoogleTokenError } from '../services/syncErrors.js';
+import { parseGoogleEventRange } from '../utils/eventTime.js';
 import {
   listIcsEventsForConnection,
   scheduleIcsSync,
@@ -287,6 +288,7 @@ export async function listGoogleEventsForConnection(connectionId: string): Promi
     singleEvents: true,
     orderBy: 'startTime',
     maxResults: 500,
+    timeZone: config.familyTimeZone,
   }).catch((error: unknown) => {
     if (isRevokedGoogleTokenError(error)) {
       return null;
@@ -305,13 +307,18 @@ export async function listGoogleEventsForConnection(connectionId: string): Promi
   for (const item of items) {
     if (!item.id || !item.start || !item.end) continue;
 
-    const allDay = Boolean(item.start.date);
-    const startAt = allDay
-      ? new Date(`${item.start.date}T00:00:00Z`)
-      : new Date(item.start.dateTime!);
-    const endAt = allDay
-      ? new Date(`${item.end.date}T00:00:00Z`)
-      : new Date(item.end.dateTime!);
+    let startAt: Date;
+    let endAt: Date;
+    let allDay: boolean;
+    try {
+      ({ startAt, endAt, allDay } = parseGoogleEventRange(
+        item.start,
+        item.end,
+        config.familyTimeZone,
+      ));
+    } catch {
+      continue;
+    }
 
     await pool.query(
       `INSERT INTO events

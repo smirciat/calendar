@@ -11,7 +11,7 @@ set "APK_PATH=%APP_DIR%\build\app\outputs\flutter-apk\app-mobile-release.apk"
 set "KIOSK_APK=%APP_DIR%\build\app\outputs\flutter-apk\app-kiosk-release.apk"
 set "ENV_FILE=%REPO_ROOT%\.env"
 set "EXPECTED_PACKAGE=com.smircich.familycalendar"
-set "FIREBASE_TESTERS_GROUP=family"
+set "FIREBASE_TESTERS_GROUP=family-android"
 set "RELEASE_NOTES=%~1"
 
 if "%RELEASE_NOTES%"=="" set "RELEASE_NOTES=Family Calendar mobile build"
@@ -36,7 +36,6 @@ if not exist "%ENV_FILE%" (
 
 for /f "usebackq eol=# tokens=1,* delims==" %%a in ("%ENV_FILE%") do (
   if /i "%%a"=="ANDROID_APP_ID" set "ANDROID_APP_ID=%%b"
-  if /i "%%a"=="FIREBASE_TESTERS_GROUP" set "FIREBASE_TESTERS_GROUP=%%b"
   if /i "%%a"=="MOBILE_PACKAGE_NAME" set "EXPECTED_PACKAGE=%%b"
 )
 

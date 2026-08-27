@@ -12,10 +12,6 @@ read_env() {
 load_firebase_env() {
   IOS_APP_ID="$(read_env IOS_APP_ID)"
   ANDROID_APP_ID="$(read_env ANDROID_APP_ID)"
-  FIREBASE_TESTERS_GROUP="$(read_env FIREBASE_TESTERS_GROUP)"
-  if [[ -z "$FIREBASE_TESTERS_GROUP" ]]; then
-    FIREBASE_TESTERS_GROUP=family
-  fi
 }
 
 load_kiosk_deploy_env() {

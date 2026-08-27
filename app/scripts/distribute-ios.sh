@@ -9,6 +9,7 @@ APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 ENV_FILE="$REPO_ROOT/.env"
 RELEASE_NOTES="${1:-Family Calendar iOS build}"
+FIREBASE_TESTERS_GROUP=family-ios
 
 # shellcheck source=_env.sh
 source "$SCRIPT_DIR/_env.sh"
