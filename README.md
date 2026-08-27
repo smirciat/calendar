@@ -118,6 +118,35 @@ IOS_APP_ID=1:YOUR_PROJECT:ios:YOUR_APP_HASH
 
 Create Firebase tester groups **`family-android`** and **`family-ios`** before distributing. Group names are hard-coded in the distribute scripts.
 
+## Android builds on bering-dev (Linux)
+
+One-time setup (no root — installs JDK + Android SDK under `~/develop` and `~/Android`):
+
+```bash
+chmod +x app/scripts/*.sh   # once, after clone
+app/scripts/setup-dev-android.sh
+```
+
+Then build / release:
+
+```bash
+app/scripts/build-mobile.sh
+app/scripts/build-kiosk.sh
+app/scripts/distribute-mobile.sh "Release notes"
+app/scripts/distribute-kiosk.sh
+# or all Android steps:
+app/scripts/android-release.sh "Release notes"
+```
+
+Firebase upload on the server (one-time, interactive):
+
+```bash
+npx firebase-tools login
+# headless CI alternative: npx firebase-tools login:ci  → set FIREBASE_TOKEN in .env
+```
+
+**Note:** Gradle heap is capped at 2 GB in `app/android/gradle.properties` so builds fit the dev VM (15 GB RAM). First build downloads NDK/CMake automatically if not pre-installed by the setup script.
+
 ## Mobile (phones) — Windows
 
 All scripts live in `app/scripts/`.

@@ -13,6 +13,8 @@ EXPECTED_PACKAGE="com.smircich.familycalendar"
 FIREBASE_TESTERS_GROUP=family-android
 RELEASE_NOTES="${1:-Family Calendar mobile build}"
 
+# shellcheck source=_android-env.sh
+source "$SCRIPT_DIR/_android-env.sh"
 # shellcheck source=_env.sh
 source "$SCRIPT_DIR/_env.sh"
 # shellcheck source=_firebase.sh

@@ -40,7 +40,13 @@ if command -v aapt >/dev/null 2>&1; then
 fi
 
 echo "Uploading $APK_PATH ..."
-scp "$APK_PATH" "${KIOSK_DEPLOY_HOST}:${KIOSK_DEPLOY_PATH}"
+deploy_dir="$(dirname "$KIOSK_DEPLOY_PATH")"
+if [[ -d "$deploy_dir" && -w "$deploy_dir" ]]; then
+  cp "$APK_PATH" "$KIOSK_DEPLOY_PATH"
+  echo "(local copy — already on deploy host)"
+else
+  scp "$APK_PATH" "${KIOSK_DEPLOY_HOST}:${KIOSK_DEPLOY_PATH}"
+fi
 
 echo
 echo "OK: uploaded to ${KIOSK_DEPLOY_HOST}:${KIOSK_DEPLOY_PATH}"

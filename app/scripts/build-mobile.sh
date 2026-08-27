@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Build Family Calendar mobile APK (Linux dev host).
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+APK_PATH="$APP_DIR/build/app/outputs/flutter-apk/app-mobile-release.apk"
+EXPECTED_PACKAGE="com.smircich.familycalendar"
+
+# shellcheck source=_android-env.sh
+source "$SCRIPT_DIR/_android-env.sh"
+
+echo
+echo "========================================"
+echo " Family Calendar - Build MOBILE APK"
+echo " Package: $EXPECTED_PACKAGE"
+echo "========================================"
+echo
+
+if ! command -v flutter >/dev/null 2>&1; then
+  echo "ERROR: flutter not in PATH."
+  exit 1
+fi
+if [[ ! -d "$ANDROID_HOME/platforms" ]]; then
+  echo "ERROR: Android SDK not found at $ANDROID_HOME"
+  echo "Run: app/scripts/setup-dev-android.sh"
+  exit 1
+fi
+
+pushd "$APP_DIR" >/dev/null
+flutter pub get
+flutter build apk --flavor mobile -t lib/main_mobile.dart --release
+popd >/dev/null
+
+if [[ ! -f "$APK_PATH" ]]; then
+  echo "ERROR: APK not found at $APK_PATH"
+  exit 1
+fi
+
+if command -v aapt >/dev/null 2>&1; then
+  actual="$(aapt dump badging "$APK_PATH" | sed -n "s/^package: name='\([^']*\)'.*/\1/p" | head -1)"
+  if [[ "$actual" != "$EXPECTED_PACKAGE" ]]; then
+    echo "ERROR: Wrong package: $actual (expected $EXPECTED_PACKAGE)"
+    exit 1
+  fi
+  echo "Verified package: $actual"
+fi
+
+echo
+echo "OK: $APK_PATH"
+echo "Next: app/scripts/distribute-mobile.sh"
