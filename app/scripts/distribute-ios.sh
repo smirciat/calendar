@@ -31,25 +31,32 @@ load_firebase_env
 
 if [[ -z "$IOS_APP_ID" ]]; then
   echo "ERROR: IOS_APP_ID is missing in $ENV_FILE"
+  echo "Add: IOS_APP_ID=1:YOUR_PROJECT:ios:YOUR_APP_HASH"
   exit 1
 fi
 
 IPA_PATH="$(find "$APP_DIR/build/ios/ipa" -name '*.ipa' -type f 2>/dev/null | head -1)"
 if [[ -z "$IPA_PATH" ]]; then
-  echo "ERROR: No IPA found. Run build-ios.sh first."
+  echo "ERROR: No IPA found under $APP_DIR/build/ios/ipa/"
+  echo "Run build-ios.sh first."
   exit 1
 fi
 
+echo "Env:     $ENV_FILE"
 echo "App ID:  $IOS_APP_ID"
 echo "Group:   $FIREBASE_TESTERS_GROUP"
 echo "IPA:     $IPA_PATH"
 echo "Notes:   $RELEASE_NOTES"
 echo
 
-firebase_cmd appdistribution:distribute "$IPA_PATH" \
+if ! firebase_cmd appdistribution:distribute "$IPA_PATH" \
   --app "$IOS_APP_ID" \
   --groups "$FIREBASE_TESTERS_GROUP" \
-  --release-notes "$RELEASE_NOTES"
+  --release-notes "$RELEASE_NOTES"; then
+  echo
+  echo "ERROR: Firebase upload failed."
+  exit 1
+fi
 
 echo
 echo "Done. Testers in group '$FIREBASE_TESTERS_GROUP' should get an email."
