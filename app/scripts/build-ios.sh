@@ -9,7 +9,7 @@ APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 echo
 echo "========================================"
 echo " Family Calendar - Build iOS IPA"
-echo " Bundle:  com.familycalendar.familyCalendar"
+echo " Bundle:  com.smircich.familycalendar"
 echo " Entry:   lib/main_mobile.dart"
 echo " Output:  app/build/ios/ipa/*.ipa"
 echo " Upload:  distribute-ios.sh"
@@ -23,6 +23,11 @@ fi
 
 cd "$APP_DIR"
 flutter pub get
+
+if [[ ! -f ios/Podfile ]]; then
+  echo "ERROR: ios/Podfile missing. Pull latest calendar repo or run flutter create . --platforms=ios in app/."
+  exit 1
+fi
 
 if [[ -d ios ]] && command -v pod >/dev/null 2>&1; then
   echo "Running pod install..."

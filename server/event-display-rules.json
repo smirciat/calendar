@@ -7,7 +7,7 @@
   "work_shift": {
     "ics_calendars": true,
     "title_keywords": [],
-    "title_contains": ["shift", "work", "on call", "on-call","counter"],
+    "title_contains": ["shift", "work", "on call", "on-call","counter","bv11"],
     "title_starts_with": []
   }
 }

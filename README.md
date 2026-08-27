@@ -4,7 +4,7 @@ Flutter + Node family wall calendar. Phones manage Google accounts; the wall kio
 
 | Flavor | Package | APK output | Distribution |
 |--------|---------|------------|--------------|
-| **mobile** | `com.smircich.familycalendar` | `app-mobile-release.apk` | Firebase App Distribution (phones) |
+| **mobile** | `com.smircich.familycalendar` | `app-mobile-release.apk` / iOS IPA | Firebase App Distribution (phones) |
 | **kiosk** | `com.smircich.familycalendar.kiosk` | `app-kiosk-release.apk` | OTA from server (or ADB for first install) |
 
 Version is set in `app/pubspec.yaml` (`version: 1.0.1+17` → name `1.0.1`, build number `17`). Bump the name for user-visible releases (`1.0.2`, …) and the number after `+` every build.
@@ -179,9 +179,9 @@ app/scripts/distribute-ios.sh "Release notes here"
 
 Reads `IOS_APP_ID` and `FIREBASE_TESTERS_GROUP` from `.env`.
 
-Output: `app/build/ios/ipa/*.ipa` (Ad Hoc, bundle `com.familycalendar.familyCalendar`).
+Output: `app/build/ios/ipa/*.ipa` (Ad Hoc, bundle `com.smircich.familycalendar`).
 
-**Before first build:** register App ID + family iPhone UDIDs in Apple Developer; create iOS app in Firebase with the same bundle ID.
+**Before first build:** register App ID **`com.smircich.familycalendar`** + family iPhone UDIDs in Apple Developer; Firebase iOS app must use the same bundle ID.
 
 ## Kiosk (wall tablet) — Windows
 
@@ -203,10 +203,16 @@ Output: `app\build\app\outputs\flutter-apk\app-kiosk-release.apk`
 
 ### Copy to server (OTA update)
 
-From your build PC (after `build-kiosk.bat`), upload to bering-dev:
+From `app/scripts/` after `build-kiosk.bat`:
+
+```cmd
+distribute-kiosk.bat
+```
+
+Or manually:
 
 ```bash
-scp app/build/app/outputs/flutter-apk/app-kiosk-release.apk \
+scp ../build/app/outputs/flutter-apk/app-kiosk-release.apk \
   bering-dev:/var/www/family-calendar/releases/app-kiosk-release.apk
 ```
 
@@ -276,6 +282,8 @@ Bump version in `app/pubspec.yaml` before each release (e.g. `1.0.2+12` — name
 | `app/scripts/distribute-ios.sh` | Upload phone IPA to Firebase |
 | `app/scripts/ios-release.sh` | Build + upload phone IPA (iOS) |
 | `app/scripts/build-kiosk.bat` | Build wall APK |
+| `app/scripts/distribute-kiosk.bat` | Upload wall APK to bering-dev (OTA) |
+| `app/scripts/distribute-kiosk.sh` | Same (Linux/macOS) |
 | `app/scripts/kiosk-setup.bat` | ADB install + HOME launcher setup (Windows) |
 | `app/scripts/kiosk-setup.sh` | Same for Linux/macOS |
 | `app/scripts/_verify-apk-package.bat` | Internal: package check (used by build/distribute) |

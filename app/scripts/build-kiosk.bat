@@ -48,7 +48,7 @@ if errorlevel 1 goto :done
 
 echo.
 echo OK: %APK_PATH%
-echo Next: kiosk-setup.bat
+echo Next: distribute-kiosk.bat  (upload for OTA) or kiosk-setup.bat  (USB install)
 
 :done
 echo.

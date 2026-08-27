@@ -17,3 +17,14 @@ load_firebase_env() {
     FIREBASE_TESTERS_GROUP=family
   fi
 }
+
+load_kiosk_deploy_env() {
+  KIOSK_DEPLOY_HOST="$(read_env KIOSK_DEPLOY_HOST)"
+  if [[ -z "$KIOSK_DEPLOY_HOST" ]]; then
+    KIOSK_DEPLOY_HOST=bering-dev
+  fi
+  KIOSK_DEPLOY_PATH="$(read_env KIOSK_DEPLOY_PATH)"
+  if [[ -z "$KIOSK_DEPLOY_PATH" ]]; then
+    KIOSK_DEPLOY_PATH=/var/www/family-calendar/releases/app-kiosk-release.apk
+  fi
+}
