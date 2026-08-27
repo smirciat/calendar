@@ -25,7 +25,7 @@ android {
 
     signingConfigs {
         if (keystorePropertiesFile.exists()) {
-            create("kioskRelease") {
+            create("release") {
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String
                 storeFile = file(keystoreProperties["storeFile"] as String)
@@ -46,19 +46,24 @@ android {
     productFlavors {
         create("mobile") {
             dimension = "app"
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         create("kiosk") {
             dimension = "app"
             applicationIdSuffix = ".kiosk"
             if (keystorePropertiesFile.exists()) {
-                signingConfig = signingConfigs.getByName("kioskRelease")
+                signingConfig = signingConfigs.getByName("release")
             }
         }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }

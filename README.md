@@ -61,24 +61,28 @@ Edit **`server/event-display-rules.json`** on bering-dev. The server assigns eac
 
 Optional override path: `EVENT_DISPLAY_RULES_PATH` in `.env`.
 
-### Publish a kiosk release (OTA)
+### Android signing (mobile + kiosk)
 
-**Signing (required for OTA):** Android only allows an update when the new APK is signed with the **same key** as the installed app. Builds 15–17 were signed on Windows; build 18 from bering-dev used a different Linux debug key → the system shows **“App not installed”**.
+Both Android flavors use **`android/key.properties`** when present (via `setup-android-signing.sh`). The same key is required for **kiosk OTA updates** and consistent **mobile** Firebase installs.
 
-One-time setup on the build host (bering-dev):
+**iOS does not use this keystore** — phones are signed in Xcode with your Apple Developer certificate (`build-ios.sh` on a Mac).
+
+One-time setup:
 
 ```bash
-# From Windows (PC that signed builds 15-17):
-app\scripts\upload-kiosk-keystore.bat
+# From Windows (PC that signed prior Android builds):
+app\scripts\upload-android-keystore.bat
 
 # On bering-dev:
-app/scripts/setup-kiosk-signing.sh --import ~/.config/family-calendar/windows-debug.keystore
+app/scripts/setup-android-signing.sh --import ~/.config/family-calendar/windows-debug.keystore
 ```
 
-If you switch to a **new** signing key instead, do one USB install (`kiosk-setup.bat`) before OTA works again.
+Legacy script names `upload-kiosk-keystore.bat` and `setup-kiosk-signing.sh` still work (they call the Android versions).
 
-1. **Bump version** in `app/pubspec.yaml` (e.g. `1.0.1+18` → name `1.0.1`, build `18`).
-2. **Build** on a machine with Flutter + kiosk signing configured: `app/scripts/build-kiosk.sh` (or `build-kiosk.bat` on Windows with the same keystore imported there)
+### Publish a kiosk release (OTA)
+
+1. **Bump version** in `app/pubspec.yaml` (e.g. `1.0.1+19`).
+2. **Build** with signing configured: `app/scripts/build-kiosk.sh`
 3. **Copy APK** to bering-dev (no sudo — directory is owned by `andy`):
 
 ```bash
@@ -97,7 +101,7 @@ cp app/build/app/outputs/flutter-apk/app-kiosk-release.apk \
 
 ```env
 KIOSK_LATEST_VERSION=1.0.1
-KIOSK_LATEST_BUILD=18
+KIOSK_LATEST_BUILD=19
 KIOSK_APK_URL=https://smircich.ddns.net/releases/app-kiosk-release.apk
 KIOSK_RELEASE_NOTES=Short note shown on the wall admin screen
 ```

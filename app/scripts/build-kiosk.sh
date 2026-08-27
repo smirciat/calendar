@@ -27,15 +27,16 @@ if [[ ! -d "$ANDROID_HOME/platforms" ]]; then
   exit 1
 fi
 if [[ ! -f "$SCRIPT_DIR/../android/key.properties" ]]; then
-  echo "WARNING: android/key.properties missing — kiosk APK will use ephemeral debug signing."
-  echo "         OTA updates will fail with \"App not installed\" after the signing key changes."
-  echo "         Run: app/scripts/setup-kiosk-signing.sh --import /path/to/your/debug.keystore"
+  echo "WARNING: android/key.properties missing — APK will use ephemeral debug signing."
+  echo "         Run: app/scripts/setup-android-signing.sh --import ~/.config/family-calendar/windows-debug.keystore"
   echo
 fi
 
+android_acquire_build_lock
 pushd "$APP_DIR" >/dev/null
+android_stop_gradle_daemons "$APP_DIR"
 flutter pub get
-flutter build apk --flavor kiosk -t lib/main_kiosk.dart --release
+android_run_flutter_build "kiosk release APK" build apk --flavor kiosk -t lib/main_kiosk.dart --release
 popd >/dev/null
 
 if [[ ! -f "$APK_PATH" ]]; then
@@ -51,6 +52,8 @@ if command -v aapt >/dev/null 2>&1; then
   fi
   echo "Verified package: $actual"
 fi
+
+android_verify_apk_signing "$APK_PATH" "$SCRIPT_DIR/../android/key.properties"
 
 echo
 echo "OK: $APK_PATH"

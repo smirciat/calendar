@@ -26,10 +26,17 @@ if [[ ! -d "$ANDROID_HOME/platforms" ]]; then
   echo "Run: app/scripts/setup-dev-android.sh"
   exit 1
 fi
+if [[ ! -f "$SCRIPT_DIR/../android/key.properties" ]]; then
+  echo "WARNING: android/key.properties missing — APK will use ephemeral debug signing."
+  echo "         Run: app/scripts/setup-android-signing.sh --import ~/.config/family-calendar/windows-debug.keystore"
+  echo
+fi
 
+android_acquire_build_lock
 pushd "$APP_DIR" >/dev/null
+android_stop_gradle_daemons "$APP_DIR"
 flutter pub get
-flutter build apk --flavor mobile -t lib/main_mobile.dart --release
+android_run_flutter_build "mobile release APK" build apk --flavor mobile -t lib/main_mobile.dart --release
 popd >/dev/null
 
 if [[ ! -f "$APK_PATH" ]]; then
@@ -45,6 +52,8 @@ if command -v aapt >/dev/null 2>&1; then
   fi
   echo "Verified package: $actual"
 fi
+
+android_verify_apk_signing "$APK_PATH" "$SCRIPT_DIR/../android/key.properties"
 
 echo
 echo "OK: $APK_PATH"
