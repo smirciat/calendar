@@ -7,7 +7,7 @@ Flutter + Node family wall calendar. Phones manage Google accounts; the wall kio
 | **mobile** | `com.smircich.familycalendar` | `app-mobile-release.apk` | Firebase App Distribution (phones) |
 | **kiosk** | `com.smircich.familycalendar.kiosk` | `app-kiosk-release.apk` | OTA from server (or ADB for first install) |
 
-Version is set in `app/pubspec.yaml` (`version: 1.0.1+12` → name `1.0.1`, build number `12`). Bump the name for user-visible releases (`1.0.2`, …) and the number after `+` every build.
+Version is set in `app/pubspec.yaml` (`version: 1.0.1+13` → name `1.0.1`, build number `13`). Bump the name for user-visible releases (`1.0.2`, …) and the number after `+` every build.
 
 See `AGENTS.md` for architecture and server setup.
 
@@ -37,7 +37,7 @@ Reference snippet: `server/deploy/nginx-family-calendar.conf.example`
 
 ### Publish a kiosk release (OTA)
 
-1. **Bump version** in `app/pubspec.yaml` (e.g. `1.0.1+12` → name `1.0.1`, build `12`).
+1. **Bump version** in `app/pubspec.yaml` (e.g. `1.0.1+13` → name `1.0.1`, build `13`).
 2. **Build** on a machine with Flutter: `app\scripts\build-kiosk.bat`
 3. **Copy APK** to bering-dev (no sudo — directory is owned by `andy`):
 
@@ -57,7 +57,7 @@ cp app/build/app/outputs/flutter-apk/app-kiosk-release.apk \
 
 ```env
 KIOSK_LATEST_VERSION=1.0.1
-KIOSK_LATEST_BUILD=12
+KIOSK_LATEST_BUILD=13
 KIOSK_APK_URL=https://smircich.ddns.net/releases/app-kiosk-release.apk
 KIOSK_RELEASE_NOTES=Short note shown on the wall admin screen
 ```

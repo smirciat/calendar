@@ -32,6 +32,37 @@ class CalendarGrid extends StatelessWidget {
     return base.copyWith(fontSize: (base.fontSize ?? 14) * _densityScale);
   }
 
+  double _eventChipHeight(BuildContext context) {
+    final labelStyle = Theme.of(context).textTheme.labelSmall;
+    final fontSize = (labelStyle?.fontSize ?? 11) * _densityScale;
+    final lineHeight = labelStyle?.height ?? 1.0;
+    const chipMargin = 2.0;
+    final verticalPadding = 4 * _densityScale;
+    return fontSize * lineHeight + verticalPadding + chipMargin;
+  }
+
+  int _visibleEventCount({
+    required double listHeight,
+    required double chipHeight,
+    required int totalGroups,
+    required bool reserveOverflowLine,
+  }) {
+    if (listHeight <= 0 || chipHeight <= 0 || totalGroups == 0) return 0;
+
+    var maxVisible = (listHeight / chipHeight).floor();
+    if (reserveOverflowLine && totalGroups > maxVisible && maxVisible > 0) {
+      maxVisible -= 1;
+    }
+    return maxVisible.clamp(0, totalGroups);
+  }
+
+  TextStyle? _overflowStyle(BuildContext context) {
+    return _scaledStyle(context, Theme.of(context).textTheme.labelSmall)?.copyWith(
+      color: Theme.of(context).colorScheme.primary,
+      fontWeight: FontWeight.w600,
+    );
+  }
+
   Color _parseColor(String hex) {
     final value = hex.replaceFirst('#', '');
     final parsed = int.parse('FF$value', radix: 16);
@@ -45,8 +76,9 @@ class CalendarGrid extends StatelessWidget {
     final dayNumberStyle = compact
         ? Theme.of(context).textTheme.bodyMedium
         : _scaledStyle(context, Theme.of(context).textTheme.titleMedium);
-    final maxDayGroups = compact ? 2 : (weekRowCount + 1).clamp(4, 8);
     final cellPadding = compact ? 6.0 : 6.0 * _densityScale;
+    final chipHeight = _eventChipHeight(context);
+    final overflowStyle = _overflowStyle(context);
 
     return Column(
       children: [
@@ -99,16 +131,43 @@ class CalendarGrid extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Expanded(
-                                child: ListView(
-                                  padding: EdgeInsets.zero,
-                                  children: dayGroups
-                                      .take(maxDayGroups)
-                                      .map((group) => _EventChip(
-                                        group: group,
-                                        parseColor: _parseColor,
-                                        fontScale: _densityScale,
-                                      ))
-                                      .toList(),
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final maxVisible = _visibleEventCount(
+                                      listHeight: constraints.maxHeight,
+                                      chipHeight: chipHeight,
+                                      totalGroups: dayGroups.length,
+                                      reserveOverflowLine: true,
+                                    );
+                                    final visibleGroups =
+                                        dayGroups.take(maxVisible).toList();
+                                    final hiddenCount =
+                                        dayGroups.length - visibleGroups.length;
+
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        ...visibleGroups.map(
+                                          (group) => _EventChip(
+                                            group: group,
+                                            parseColor: _parseColor,
+                                            fontScale: _densityScale,
+                                          ),
+                                        ),
+                                        if (hiddenCount > 0)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 2),
+                                            child: Text(
+                                              '+$hiddenCount more',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: overflowStyle,
+                                            ),
+                                          ),
+                                      ],
+                                    );
+                                  },
                                 ),
                               ),
                             ],
