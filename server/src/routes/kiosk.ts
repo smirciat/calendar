@@ -8,7 +8,12 @@ kioskRouter.get('/update', (req, res) => {
   const { latestBuild, latestVersion, apkUrl, releaseNotes } = config.kiosk;
 
   if (!latestBuild || !apkUrl) {
-    res.status(204).end();
+    res.status(503).json({
+      error: 'kiosk_not_configured',
+      message: !apkUrl
+        ? 'KIOSK_APK_URL is not set on the server.'
+        : 'KIOSK_LATEST_BUILD is not set on the server.',
+    });
     return;
   }
 

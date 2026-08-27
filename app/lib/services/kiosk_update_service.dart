@@ -46,6 +46,21 @@ class KioskUpdateService {
     );
     final response = await http.get(uri).timeout(const Duration(seconds: 15));
     if (response.statusCode == 204) return null;
+    if (response.statusCode == 503) {
+      final body = response.body.trim();
+      if (body.isNotEmpty) {
+        try {
+          final json = jsonDecode(body) as Map<String, dynamic>;
+          final message = json['message'] as String?;
+          if (message != null && message.isNotEmpty) {
+            throw Exception(message);
+          }
+        } catch (error) {
+          if (error is Exception) rethrow;
+        }
+      }
+      throw Exception('Server update config is incomplete.');
+    }
     if (response.statusCode >= 400) {
       throw Exception('Update check failed (${response.statusCode})');
     }

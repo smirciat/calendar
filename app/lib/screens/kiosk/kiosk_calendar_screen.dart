@@ -37,6 +37,7 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
   bool _initialAnchorChecked = false;
   int _adminTapCount = 0;
   Timer? _adminTapTimer;
+  bool _adminSheetOpen = false;
 
   @override
   void initState() {
@@ -173,20 +174,31 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
   }
 
   void _onAdminTitleTap() {
+    if (_adminSheetOpen) return;
     _onUserInteraction();
     _adminTapTimer?.cancel();
     _adminTapCount++;
     if (_adminTapCount >= 7) {
       _adminTapCount = 0;
-      showKioskAdminSheet(
-        context,
-        updateService: KioskUpdateService(baseUrl: widget.api.baseUrl),
-      );
+      _openAdminSheet();
       return;
     }
     _adminTapTimer = Timer(const Duration(seconds: 2), () {
       if (mounted) setState(() => _adminTapCount = 0);
     });
+  }
+
+  Future<void> _openAdminSheet() async {
+    if (_adminSheetOpen || !mounted) return;
+    setState(() => _adminSheetOpen = true);
+    try {
+      await showKioskAdminSheet(
+        context,
+        updateService: KioskUpdateService(baseUrl: widget.api.baseUrl),
+      );
+    } finally {
+      if (mounted) setState(() => _adminSheetOpen = false);
+    }
   }
 
   @override

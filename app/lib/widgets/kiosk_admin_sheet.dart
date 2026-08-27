@@ -11,6 +11,8 @@ Future<void> showKioskAdminSheet(
     context: context,
     useRootNavigator: true,
     isScrollControlled: true,
+    isDismissible: false,
+    enableDrag: false,
     showDragHandle: true,
     builder: (context) => _KioskAdminSheet(updateService: updateService),
   );
@@ -50,7 +52,9 @@ class _KioskAdminSheetState extends State<_KioskAdminSheet> {
       setState(() {
         _packageInfo = info;
         _update = update;
-        _status = update == null ? 'App is up to date.' : 'Update available.';
+        _status = update == null
+            ? 'No newer build on the server.'
+            : 'Update available.';
       });
     } catch (error) {
       if (!mounted) return;
@@ -144,6 +148,11 @@ class _KioskAdminSheetState extends State<_KioskAdminSheet> {
                   : const Text('Download and install'),
             ),
           ],
+          const SizedBox(height: 12),
+          TextButton(
+            onPressed: _busy ? null : () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
         ],
       ),
     );
