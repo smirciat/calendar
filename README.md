@@ -68,8 +68,10 @@ Optional override path: `EVENT_DISPLAY_RULES_PATH` in `.env`.
 One-time setup on the build host (bering-dev):
 
 ```bash
-# Copy the Windows PC debug keystore that signed the tablet's current build:
-#   scp "%USERPROFILE%\\.android\\debug.keystore" bering-dev:~/.config/family-calendar/windows-debug.keystore
+# From Windows (PC that signed builds 15-17):
+app\scripts\upload-kiosk-keystore.bat
+
+# On bering-dev:
 app/scripts/setup-kiosk-signing.sh --import ~/.config/family-calendar/windows-debug.keystore
 ```
 
