@@ -12,6 +12,7 @@ CalendarEvent _event({
   String nickname = 'Dad',
   String color = '#4285F4',
   String sourceType = 'google',
+  int? displayPriority,
 }) {
   return CalendarEvent(
     id: id,
@@ -22,6 +23,7 @@ CalendarEvent _event({
     nickname: nickname,
     color: color,
     sourceType: sourceType,
+    displayPriority: displayPriority,
   );
 }
 
@@ -148,6 +150,7 @@ void main() {
         endAt: end,
         sourceType: 'ics',
         nickname: 'Cody',
+        displayPriority: 1,
       ),
       _event(id: '3', title: 'Soccer', startAt: start, endAt: end),
     ];
@@ -162,10 +165,10 @@ void main() {
     final start = DateTime(2026, 8, 26, 9, 0);
     final end = DateTime(2026, 8, 26, 10, 0);
     final events = [
-      _event(id: '1', title: 'Soccer', startAt: start, endAt: end),
-      _event(id: '2', title: 'Doctor visit', startAt: start, endAt: end),
-      _event(id: '3', title: 'Night shift', startAt: start, endAt: end),
-      _event(id: '4', title: 'Lunch', startAt: start, endAt: end),
+      _event(id: '1', title: 'Soccer', startAt: start, endAt: end, displayPriority: 2),
+      _event(id: '2', title: 'Doctor visit', startAt: start, endAt: end, displayPriority: 0),
+      _event(id: '3', title: 'Night shift', startAt: start, endAt: end, displayPriority: 1),
+      _event(id: '4', title: 'Lunch', startAt: start, endAt: end, displayPriority: 2),
     ];
 
     final sorted = eventsForDay(events, day);

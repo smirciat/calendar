@@ -10,6 +10,7 @@ class CalendarEvent {
     this.sourceType = 'google',
     this.description,
     this.location,
+    this.displayPriority,
   });
 
   final String id;
@@ -22,6 +23,8 @@ class CalendarEvent {
   final String sourceType;
   final String? description;
   final String? location;
+  /// Sort order from server (0 = top). See server/event-display-rules.json.
+  final int? displayPriority;
 
   bool get isIcs => sourceType == 'ics';
 
@@ -37,6 +40,7 @@ class CalendarEvent {
       sourceType: json['source_type'] as String? ?? 'google',
       description: json['description'] as String?,
       location: json['location'] as String?,
+      displayPriority: json['display_priority'] as int?,
     );
   }
 }

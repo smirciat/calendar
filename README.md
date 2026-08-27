@@ -7,7 +7,7 @@ Flutter + Node family wall calendar. Phones manage Google accounts; the wall kio
 | **mobile** | `com.smircich.familycalendar` | `app-mobile-release.apk` | Firebase App Distribution (phones) |
 | **kiosk** | `com.smircich.familycalendar.kiosk` | `app-kiosk-release.apk` | OTA from server (or ADB for first install) |
 
-Version is set in `app/pubspec.yaml` (`version: 1.0.1+16` → name `1.0.1`, build number `16`). Bump the name for user-visible releases (`1.0.2`, …) and the number after `+` every build.
+Version is set in `app/pubspec.yaml` (`version: 1.0.1+17` → name `1.0.1`, build number `17`). Bump the name for user-visible releases (`1.0.2`, …) and the number after `+` every build.
 
 See `AGENTS.md` for architecture and server setup.
 
@@ -19,6 +19,7 @@ Public URL: `https://smircich.ddns.net` (nginx on **443** → Node on `127.0.0.1
 |------|--------|
 | nginx site config | `/etc/nginx/sites-available/default` (editable by `andy`; **reload needs sudo**) |
 | Node app + `.env` | `/home/andy/calendar/` (PM2: `family-calendar`) |
+| Event sort rules | `server/event-display-rules.json` (reloads on save; no app rebuild) |
 | Kiosk APK on disk | `/var/www/family-calendar/releases/app-kiosk-release.apk` |
 | Kiosk APK URL | `https://smircich.ddns.net/releases/app-kiosk-release.apk` |
 
@@ -35,9 +36,34 @@ The `443` server block for `smircich.ddns.net` includes:
 
 Reference snippet: `server/deploy/nginx-family-calendar.conf.example`
 
+### Event sort order (doctor / work shifts at top)
+
+Edit **`server/event-display-rules.json`** on bering-dev. The server assigns each event a `display_priority` (0 = top). Changes apply on the next calendar poll (~60s); **no Flutter rebuild**.
+
+```json
+{
+  "doctor": {
+    "title_keywords": ["abby", "bobby", "shockwave"],
+    "title_contains": ["doctor", " appointment", "appt"],
+    "title_starts_with": ["dr ", "dr.", "appointment"]
+  },
+  "work_shift": {
+    "ics_calendars": true,
+    "title_keywords": [],
+    "title_contains": ["shift", "work", "on call", "on-call"]
+  }
+}
+```
+
+- **`title_keywords`** — substring match anywhere in the title (add new doctor names here)
+- **`title_contains`** / **`title_starts_with`** — additional patterns
+- **`ics_calendars`** — treat all ICS/work-shift feed events as work shifts (priority 1)
+
+Optional override path: `EVENT_DISPLAY_RULES_PATH` in `.env`.
+
 ### Publish a kiosk release (OTA)
 
-1. **Bump version** in `app/pubspec.yaml` (e.g. `1.0.1+16` → name `1.0.1`, build `16`).
+1. **Bump version** in `app/pubspec.yaml` (e.g. `1.0.1+17` → name `1.0.1`, build `17`).
 2. **Build** on a machine with Flutter: `app\scripts\build-kiosk.bat`
 3. **Copy APK** to bering-dev (no sudo — directory is owned by `andy`):
 
@@ -57,7 +83,7 @@ cp app/build/app/outputs/flutter-apk/app-kiosk-release.apk \
 
 ```env
 KIOSK_LATEST_VERSION=1.0.1
-KIOSK_LATEST_BUILD=16
+KIOSK_LATEST_BUILD=17
 KIOSK_APK_URL=https://smircich.ddns.net/releases/app-kiosk-release.apk
 KIOSK_RELEASE_NOTES=Short note shown on the wall admin screen
 ```

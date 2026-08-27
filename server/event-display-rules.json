@@ -1,0 +1,13 @@
+{
+  "doctor": {
+    "title_keywords": ["abby", "bobby", "shockwave"],
+    "title_contains": ["doctor", " appointment", "appt"],
+    "title_starts_with": ["dr ", "dr.", "appointment"]
+  },
+  "work_shift": {
+    "ics_calendars": true,
+    "title_keywords": [],
+    "title_contains": ["shift", "work", "on call", "on-call","counter"],
+    "title_starts_with": []
+  }
+}

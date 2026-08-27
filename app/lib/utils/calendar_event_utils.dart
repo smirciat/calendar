@@ -41,25 +41,9 @@ String normalizeEventTitle(String title) {
   return title.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
 }
 
-/// Lower number = shown higher in the day list.
+/// Lower number = shown higher in the day list (computed on server).
 int eventDisplayPriority(CalendarEvent event) {
-  final title = normalizeEventTitle(event.title);
-  if (title.contains('doctor') ||
-      title.startsWith('dr ') ||
-      title.startsWith('dr.') ||
-      title.contains(' appointment') ||
-      title.startsWith('appointment') ||
-      title.contains('appt')) {
-    return 0;
-  }
-  if (event.isIcs ||
-      title.contains('shift') ||
-      title.contains('work') ||
-      title.contains('on call') ||
-      title.contains('on-call')) {
-    return 1;
-  }
-  return 2;
+  return event.displayPriority ?? 2;
 }
 
 int compareEventsForDisplay(CalendarEvent a, CalendarEvent b) {

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { pool } from '../db/pool.js';
 import { requireFamilyOrDeviceAuth } from '../middleware/auth.js';
+import { eventDisplayPriority } from '../services/eventDisplayRules.js';
 
 export const eventsRouter = Router();
 
@@ -36,5 +37,10 @@ eventsRouter.get('/', requireFamilyOrDeviceAuth, async (req, res) => {
     [familyId, from, to],
   );
 
-  res.json(result.rows);
+  res.json(
+    result.rows.map((row) => ({
+      ...row,
+      display_priority: eventDisplayPriority(row),
+    })),
+  );
 });
