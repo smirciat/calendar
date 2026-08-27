@@ -12,9 +12,15 @@ export type WorkShiftRuleSet = TitleRuleSet & {
   ics_calendars?: boolean;
 };
 
+export type DedupeRuleSet = {
+  title_keywords?: string[];
+  start_tolerance_minutes?: number;
+};
+
 export type EventDisplayRules = {
   doctor: TitleRuleSet;
   work_shift: WorkShiftRuleSet;
+  dedupe?: DedupeRuleSet;
 };
 
 export type EventForDisplayPriority = {
@@ -39,6 +45,10 @@ const defaultRules: EventDisplayRules = {
     title_keywords: [],
     title_contains: ['shift', 'work', 'on call', 'on-call'],
     title_starts_with: [],
+  },
+  dedupe: {
+    title_keywords: ['bobby', 'abby'],
+    start_tolerance_minutes: 15,
   },
 };
 
@@ -94,6 +104,7 @@ export function getEventDisplayRules(): EventDisplayRules {
     cachedRules = {
       doctor: { ...defaultRules.doctor, ...parsed.doctor },
       work_shift: { ...defaultRules.work_shift, ...parsed.work_shift },
+      dedupe: { ...defaultRules.dedupe, ...parsed.dedupe },
     };
     cachedMtime = mtime;
     return cachedRules;

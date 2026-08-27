@@ -9,5 +9,9 @@
     "title_keywords": [],
     "title_contains": ["shift", "work", "on call", "on-call","counter","bv11"],
     "title_starts_with": []
+  },
+  "dedupe": {
+    "title_keywords": ["bobby", "abby"],
+    "start_tolerance_minutes": 15
   }
 }

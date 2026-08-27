@@ -1,4 +1,4 @@
-import { google } from 'googleapis';
+import { google, type calendar_v3 } from 'googleapis';
 import { Router } from 'express';
 import { config, googleOAuthConfigured } from '../config.js';
 import { pool } from '../db/pool.js';
@@ -281,29 +281,41 @@ export async function listGoogleEventsForConnection(connectionId: string): Promi
   const timeMax = new Date();
   timeMax.setDate(timeMax.getDate() + 120);
 
-  const response = await calendar.events.list({
+  const listParams = {
     calendarId: 'primary',
     timeMin: timeMin.toISOString(),
     timeMax: timeMax.toISOString(),
     singleEvents: true,
-    orderBy: 'startTime',
+    orderBy: 'startTime' as const,
     maxResults: 500,
     timeZone: config.familyTimeZone,
-  }).catch((error: unknown) => {
-    if (isRevokedGoogleTokenError(error)) {
-      return null;
+  };
+
+  const items: calendar_v3.Schema$Event[] = [];
+  let pageToken: string | undefined;
+  do {
+    const response = await calendar.events.list({
+      ...listParams,
+      pageToken,
+    }).catch((error: unknown) => {
+      if (isRevokedGoogleTokenError(error)) {
+        return null;
+      }
+      throw error;
+    });
+
+    if (!response) {
+      console.error(
+        `Google token revoked for connection ${connectionId} — re-link in mobile app`,
+      );
+      return;
     }
-    throw error;
-  });
 
-  if (!response) {
-    console.error(
-      `Google token revoked for connection ${connectionId} — re-link in mobile app`,
-    );
-    return;
-  }
+    items.push(...(response.data.items ?? []));
+    pageToken = response.data.nextPageToken ?? undefined;
+  } while (pageToken);
 
-  const items = response.data.items ?? [];
+  const seenIds = new Set<string>();
   for (const item of items) {
     if (!item.id || !item.start || !item.end) continue;
 
@@ -320,6 +332,7 @@ export async function listGoogleEventsForConnection(connectionId: string): Promi
       continue;
     }
 
+    seenIds.add(item.id);
     await pool.query(
       `INSERT INTO events
         (calendar_connection_id, google_event_id, title, description, location, start_at, end_at, all_day, updated_at)
@@ -343,6 +356,17 @@ export async function listGoogleEventsForConnection(connectionId: string): Promi
         endAt,
         allDay,
       ],
+    );
+  }
+
+  if (seenIds.size > 0) {
+    await pool.query(
+      `DELETE FROM events
+       WHERE calendar_connection_id = $1
+         AND start_at >= $2
+         AND start_at < $3
+         AND NOT (google_event_id = ANY($4::text[]))`,
+      [row.id, timeMin, timeMax, [...seenIds]],
     );
   }
 

@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import { pool } from '../db/pool.js';
 import { requireFamilyOrDeviceAuth } from '../middleware/auth.js';
-import { eventDisplayPriority } from '../services/eventDisplayRules.js';
+import { dedupeFamilyEvents } from '../services/eventDedupe.js';
+import {
+  eventDisplayPriority,
+  getEventDisplayRules,
+} from '../services/eventDisplayRules.js';
 
 export const eventsRouter = Router();
 
@@ -24,6 +28,7 @@ eventsRouter.get('/', requireFamilyOrDeviceAuth, async (req, res) => {
        e.start_at,
        e.end_at,
        e.all_day,
+       e.calendar_connection_id,
        c.nickname,
        c.color,
        c.google_account_email,
@@ -37,10 +42,17 @@ eventsRouter.get('/', requireFamilyOrDeviceAuth, async (req, res) => {
     [familyId, from, to],
   );
 
+  const withPriority = result.rows.map((row) => ({
+    ...row,
+    display_priority: eventDisplayPriority(row),
+  }));
+
+  const deduped = dedupeFamilyEvents(
+    withPriority,
+    getEventDisplayRules().dedupe ?? {},
+  );
+
   res.json(
-    result.rows.map((row) => ({
-      ...row,
-      display_priority: eventDisplayPriority(row),
-    })),
+    deduped.map(({ calendar_connection_id: _calendarConnectionId, ...row }) => row),
   );
 });
