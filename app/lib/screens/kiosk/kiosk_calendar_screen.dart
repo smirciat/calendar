@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 
 import 'package:family_calendar/models/calendar_models.dart';
 import 'package:family_calendar/services/api_client.dart';
+import 'package:family_calendar/services/kiosk_update_service.dart';
 import 'package:family_calendar/services/session_storage.dart';
 import 'package:family_calendar/utils/calendar_event_utils.dart';
 import 'package:family_calendar/widgets/calendar_grid.dart';
 import 'package:family_calendar/widgets/day_detail_sheet.dart';
+import 'package:family_calendar/widgets/kiosk_admin_sheet.dart';
 
 class KioskCalendarScreen extends StatefulWidget {
   const KioskCalendarScreen({super.key, required this.api});
@@ -33,6 +35,8 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
   Timer? _clockSyncTimer;
   Timer? _pollTimer;
   bool _initialAnchorChecked = false;
+  int _adminTapCount = 0;
+  Timer? _adminTapTimer;
 
   @override
   void initState() {
@@ -58,6 +62,7 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
     _idleTimer?.cancel();
     _clockSyncTimer?.cancel();
     _pollTimer?.cancel();
+    _adminTapTimer?.cancel();
     super.dispose();
   }
 
@@ -167,6 +172,23 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
     _loadEvents();
   }
 
+  void _onAdminTitleTap() {
+    _onUserInteraction();
+    _adminTapTimer?.cancel();
+    _adminTapCount++;
+    if (_adminTapCount >= 7) {
+      _adminTapCount = 0;
+      showKioskAdminSheet(
+        context,
+        updateService: KioskUpdateService(baseUrl: widget.api.baseUrl),
+      );
+      return;
+    }
+    _adminTapTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _adminTapCount = 0);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final weeks = buildWeekGrid(anchor: _anchor, weekCount: _weekRows);
@@ -176,7 +198,10 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
       onPanDown: (_) => _onUserInteraction(),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Family Calendar'),
+          title: GestureDetector(
+            onTap: _onAdminTitleTap,
+            child: const Text('Family Calendar'),
+          ),
           actions: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),

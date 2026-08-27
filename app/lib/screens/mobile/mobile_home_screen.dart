@@ -61,6 +61,9 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _pollEvents();
+      if (_tab == 1) {
+        unawaited(_loadCalendars());
+      }
     }
   }
 
@@ -73,6 +76,19 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
   Future<void> _setFontScale(double scale) async {
     setState(() => _fontScale = scale);
     await _storage.setFontScale(scale);
+  }
+
+  Future<void> _loadCalendars() async {
+    try {
+      final calendars = await widget.api.listCalendars();
+      if (!mounted) return;
+      setState(() => _calendars = calendars);
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    }
   }
 
   Future<void> _refresh({bool showSpinner = true}) async {
@@ -97,6 +113,10 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
       if (!mounted) return;
       if (showSpinner) {
         setState(() => _error = error.message);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
       }
     } finally {
       if (mounted && showSpinner) setState(() => _loading = false);
@@ -119,9 +139,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
     final connection = await showAddIcsCalendarSheet(context, api: widget.api);
     if (connection == null || !mounted) return;
 
-    setState(() {
-      _calendars = [..._calendars, connection];
-    });
+    await _loadCalendars();
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -210,7 +228,12 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
-        onDestinationSelected: (index) => setState(() => _tab = index),
+        onDestinationSelected: (index) {
+          setState(() => _tab = index);
+          if (index == 1) {
+            unawaited(_loadCalendars());
+          }
+        },
         destinations: const [
           NavigationDestination(icon: Icon(Icons.calendar_month), label: 'Calendar'),
           NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
@@ -272,6 +295,42 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
                   ),
                 ),
                 const SizedBox(height: 12),
+                Text(
+                  'Linked calendars',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Tap a calendar to change its color and nickname.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (_calendars.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Text('No calendars linked yet'),
+                  )
+                else
+                  Card(
+                    margin: const EdgeInsets.only(top: 8),
+                    child: Column(
+                      children: _calendars.map(
+                        (calendar) => ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: parseCalendarColor(calendar.color),
+                          ),
+                          title: Text(calendar.nickname),
+                          subtitle: Text(
+                            calendar.isIcs
+                                ? 'Work shift feed · ${calendar.subtitle}'
+                                : calendar.subtitle,
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => _editCalendar(calendar),
+                        ),
+                      ).toList(),
+                    ),
+                  ),
+                const SizedBox(height: 12),
                 Card(
                   child: ListTile(
                     title: const Text('Add calendar sync link'),
@@ -320,25 +379,6 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                Text('Linked calendars', style: Theme.of(context).textTheme.titleMedium),
-                if (_calendars.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text('No calendars linked yet'),
-                  )
-                else
-                  ..._calendars.map(
-                    (calendar) => ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: parseCalendarColor(calendar.color),
-                      ),
-                      title: Text(calendar.nickname),
-                      subtitle: Text(calendar.subtitle),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => _editCalendar(calendar),
-                    ),
-                  ),
               ],
             ),
     );

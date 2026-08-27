@@ -1,16 +1,12 @@
-# Family Calendar API — nginx reverse proxy
+# Family Calendar — nginx snippet for bering-dev
 #
-# Node listens on PORT=3847 (127.0.0.1 only recommended). Do NOT forward 3847 on WAN.
-# HTTPS: nginx on smircich.ddns.net:443 proxies /api/ to localhost:3847
+# Production config lives in /etc/nginx/sites-available/default (andy can edit;
+# reload with: sudo nginx -t && sudo systemctl reload nginx)
 #
-# Install: copy into your nginx sites-available and symlink sites-enabled.
-
-server {
-    listen 443 ssl;
-    server_name smircich.ddns.net;
-
-    # ssl_certificate /path/to/fullchain.pem;
-    # ssl_certificate_key /path/to/privkey.pem;
+# Server block: listen 443 ssl on smircich.ddns.net
+# Node API: proxy_pass http://127.0.0.1:3847 for /api/
+# Kiosk APK: /var/www/family-calendar/releases/app-kiosk-release.apk
+#            → https://smircich.ddns.net/releases/app-kiosk-release.apk
 
     location /api/ {
         proxy_pass http://127.0.0.1:3847;
@@ -26,9 +22,8 @@ server {
         proxy_set_header Host $host;
     }
 
-    location /legal/ {
-        proxy_pass http://127.0.0.1:3847;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $scheme;
+    location /releases/ {
+        alias /var/www/family-calendar/releases/;
+        default_type application/vnd.android.package-archive;
+        add_header Content-Disposition 'attachment; filename="app-kiosk-release.apk"';
     }
-}

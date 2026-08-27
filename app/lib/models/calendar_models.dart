@@ -7,6 +7,7 @@ class CalendarEvent {
     required this.allDay,
     required this.nickname,
     required this.color,
+    this.sourceType = 'google',
     this.description,
     this.location,
   });
@@ -18,8 +19,11 @@ class CalendarEvent {
   final bool allDay;
   final String nickname;
   final String color;
+  final String sourceType;
   final String? description;
   final String? location;
+
+  bool get isIcs => sourceType == 'ics';
 
   factory CalendarEvent.fromJson(Map<String, dynamic> json) {
     return CalendarEvent(
@@ -30,6 +34,7 @@ class CalendarEvent {
       allDay: json['all_day'] as bool? ?? false,
       nickname: json['nickname'] as String? ?? 'Calendar',
       color: json['color'] as String? ?? '#4285F4',
+      sourceType: json['source_type'] as String? ?? 'google',
       description: json['description'] as String?,
       location: json['location'] as String?,
     );
@@ -62,9 +67,12 @@ class CalendarConnection {
   }
 
   factory CalendarConnection.fromJson(Map<String, dynamic> json) {
+    final sourceType =
+        (json['source_type'] as String?) ??
+        (json['feed_url'] != null ? 'ics' : 'google');
     return CalendarConnection(
       id: json['id'] as String,
-      sourceType: json['source_type'] as String? ?? 'google',
+      sourceType: sourceType,
       googleAccountEmail: json['google_account_email'] as String?,
       feedUrl: json['feed_url'] as String?,
       nickname: json['nickname'] as String? ?? 'Calendar',

@@ -101,7 +101,14 @@ class ApiClient {
       throw ApiException('Failed to load calendars', statusCode: response.statusCode);
     }
     return body
-        .map((item) => CalendarConnection.fromJson(item as Map<String, dynamic>))
+        .map((item) {
+          try {
+            return CalendarConnection.fromJson(item as Map<String, dynamic>);
+          } catch (_) {
+            return null;
+          }
+        })
+        .whereType<CalendarConnection>()
         .toList();
   }
 

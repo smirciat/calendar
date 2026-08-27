@@ -5,11 +5,74 @@ Flutter + Node family wall calendar. Phones manage Google accounts; the wall kio
 | Flavor | Package | APK output | Distribution |
 |--------|---------|------------|--------------|
 | **mobile** | `com.smircich.familycalendar` | `app-mobile-release.apk` | Firebase App Distribution (phones) |
-| **kiosk** | `com.smircich.familycalendar.kiosk` | `app-kiosk-release.apk` | ADB sideload (wall tablet) |
+| **kiosk** | `com.smircich.familycalendar.kiosk` | `app-kiosk-release.apk` | OTA from server (or ADB for first install) |
 
-Version is set in `app/pubspec.yaml` (`version: 1.0.0+7` → name `1.0.0`, build number `7`).
+Version is set in `app/pubspec.yaml` (`version: 1.0.1+11` → name `1.0.1`, build number `11`). Bump the name for user-visible releases (`1.0.2`, …) and the number after `+` every build.
 
 See `AGENTS.md` for architecture and server setup.
+
+## Server (bering-dev) — nginx, PM2, kiosk OTA
+
+Public URL: `https://smircich.ddns.net` (nginx on **443** → Node on `127.0.0.1:3847`).
+
+| What | Where |
+|------|--------|
+| nginx site config | `/etc/nginx/sites-available/default` (editable by `andy`; **reload needs sudo**) |
+| Node app + `.env` | `/home/andy/calendar/` (PM2: `family-calendar`) |
+| Kiosk APK on disk | `/var/www/family-calendar/releases/app-kiosk-release.apk` |
+| Kiosk APK URL | `https://smircich.ddns.net/releases/app-kiosk-release.apk` |
+
+### nginx reload (after editing default)
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+The `443` server block for `smircich.ddns.net` includes:
+
+- `location /api/` → `http://127.0.0.1:3847`
+- `location /releases/` → static APK from `/var/www/family-calendar/releases/`
+
+Reference snippet: `server/deploy/nginx-family-calendar.conf.example`
+
+### Publish a kiosk release (OTA)
+
+1. **Bump version** in `app/pubspec.yaml` (e.g. `1.0.1+11` → name `1.0.1`, build `11`).
+2. **Build** on a machine with Flutter: `app\scripts\build-kiosk.bat`
+3. **Copy APK** to bering-dev (no sudo — directory is owned by `andy`):
+
+```bash
+scp app/build/app/outputs/flutter-apk/app-kiosk-release.apk \
+  bering-dev:/var/www/family-calendar/releases/app-kiosk-release.apk
+```
+
+Or on bering-dev directly after building:
+
+```bash
+cp app/build/app/outputs/flutter-apk/app-kiosk-release.apk \
+  /var/www/family-calendar/releases/app-kiosk-release.apk
+```
+
+4. **Update `.env`** in `/home/andy/calendar/.env` (must match `pubspec.yaml`):
+
+```env
+KIOSK_LATEST_VERSION=1.0.1
+KIOSK_LATEST_BUILD=11
+KIOSK_APK_URL=https://smircich.ddns.net/releases/app-kiosk-release.apk
+KIOSK_RELEASE_NOTES=Short note shown on the wall admin screen
+```
+
+5. **Restart Node:**
+
+```bash
+cd ~/calendar/server && npm run build && pm2 restart family-calendar
+```
+
+6. **On the wall tablet:** tap **“Family Calendar” in the title bar 7 times** → **Check for updates** → **Download and install** → tap **Install** on the Android prompt.
+
+Update check API: `GET /api/v1/kiosk/update?build=N` (returns `204` if already current).
+
+**First install** on a new tablet still requires USB/ADB once (`kiosk-setup.bat`); OTA handles updates after that.
 
 ## Prerequisites
 
@@ -128,6 +191,8 @@ adb shell am start -n com.smircich.familycalendar.kiosk/com.familycalendar.famil
 
 After a package-name change, run `kiosk-setup.bat` again to set HOME and re-pair the device.
 
+OTA updates after the first install are documented in [Server (bering-dev)](#server-bering-dev--nginx-pm2-kiosk-ota) above.
+
 ## Kiosk — Linux / macOS
 
 ```bash
@@ -159,7 +224,7 @@ flutter build apk --flavor kiosk -t lib/main_kiosk.dart --release
 adb install -r build\app\outputs\flutter-apk\app-kiosk-release.apk
 ```
 
-Bump build number in `app/pubspec.yaml` before each distro upload (e.g. `1.0.0+8`).
+Bump version in `app/pubspec.yaml` before each release (e.g. `1.0.2+12` — name for humans, number after `+` for Android/iOS build codes).
 
 ## Script reference
 

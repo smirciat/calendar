@@ -49,6 +49,12 @@ export const config = {
       `${required('BASE_URL', 'https://smircich.ddns.net')}/api/v1/calendars/oauth/callback`,
   },
   syncIntervalMs: Number(process.env.SYNC_INTERVAL_MS ?? 60_000),
+  kiosk: {
+    latestVersion: process.env.KIOSK_LATEST_VERSION ?? '',
+    latestBuild: Number(process.env.KIOSK_LATEST_BUILD ?? 0),
+    apkUrl: process.env.KIOSK_APK_URL ?? '',
+    releaseNotes: process.env.KIOSK_RELEASE_NOTES ?? '',
+  },
 };
 
 export function googleOAuthConfigured(): boolean {

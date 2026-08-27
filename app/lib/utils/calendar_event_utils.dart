@@ -52,7 +52,8 @@ int eventDisplayPriority(CalendarEvent event) {
       title.contains('appt')) {
     return 0;
   }
-  if (title.contains('shift') ||
+  if (event.isIcs ||
+      title.contains('shift') ||
       title.contains('work') ||
       title.contains('on call') ||
       title.contains('on-call')) {

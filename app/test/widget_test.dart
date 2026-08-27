@@ -11,6 +11,7 @@ CalendarEvent _event({
   bool allDay = false,
   String nickname = 'Dad',
   String color = '#4285F4',
+  String sourceType = 'google',
 }) {
   return CalendarEvent(
     id: id,
@@ -20,6 +21,7 @@ CalendarEvent _event({
     allDay: allDay,
     nickname: nickname,
     color: color,
+    sourceType: sourceType,
   );
 }
 
@@ -131,6 +133,28 @@ void main() {
 
     expect(groups.length, 1);
     expect(groups.first.events.length, 2);
+  });
+
+  test('eventsForDay puts ICS work shift calendars near the top', () {
+    final day = DateTime(2026, 8, 26);
+    final start = DateTime(2026, 8, 26, 9, 0);
+    final end = DateTime(2026, 8, 26, 17, 0);
+    final events = [
+      _event(id: '1', title: 'Groceries', startAt: start, endAt: end),
+      _event(
+        id: '2',
+        title: '7:00 AM - 3:00 PM',
+        startAt: start,
+        endAt: end,
+        sourceType: 'ics',
+        nickname: 'Cody',
+      ),
+      _event(id: '3', title: 'Soccer', startAt: start, endAt: end),
+    ];
+
+    final sorted = eventsForDay(events, day);
+
+    expect(sorted.first.title, '7:00 AM - 3:00 PM');
   });
 
   test('eventsForDay puts doctor appointments and shifts first', () {
