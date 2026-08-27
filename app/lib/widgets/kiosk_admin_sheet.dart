@@ -9,6 +9,7 @@ Future<void> showKioskAdminSheet(
 }) {
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     showDragHandle: true,
     builder: (context) => _KioskAdminSheet(updateService: updateService),

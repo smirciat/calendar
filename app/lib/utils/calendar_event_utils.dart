@@ -3,7 +3,7 @@ import 'package:family_calendar/models/calendar_models.dart';
 /// Match server default sync interval (see SYNC_INTERVAL_MS in .env).
 const calendarEventPollInterval = Duration(seconds: 60);
 
-const calendarFontScaleOptions = <double>[0.85, 1.0, 1.15, 1.3, 1.5];
+const calendarFontScaleOptions = <double>[0.7, 0.85, 1.0, 1.15, 1.3, 1.5];
 
 class EventDisplayGroup {
   EventDisplayGroup(this.events) : assert(events.isNotEmpty);
@@ -278,6 +278,7 @@ List<EventDisplayGroup> groupDuplicateEvents(
 }
 
 String fontScaleLabel(double scale) {
+  if (scale <= 0.77) return 'X-Small';
   if (scale <= 0.9) return 'Small';
   if (scale <= 1.05) return 'Default';
   if (scale <= 1.2) return 'Large';

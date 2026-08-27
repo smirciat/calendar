@@ -193,12 +193,10 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
   Widget build(BuildContext context) {
     final weeks = buildWeekGrid(anchor: _anchor, weekCount: _weekRows);
 
-    return GestureDetector(
-      onTap: _onUserInteraction,
-      onPanDown: (_) => _onUserInteraction(),
-      child: Scaffold(
+    return Scaffold(
         appBar: AppBar(
           title: GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: _onAdminTitleTap,
             child: const Text('Family Calendar'),
           ),
@@ -264,28 +262,32 @@ class _KioskCalendarScreenState extends State<KioskCalendarScreen>
             ),
           ],
         ),
-        body: _error != null
-            ? Center(child: Text(_error!))
-            : Padding(
-                padding: const EdgeInsets.all(12),
-                child: CalendarGrid(
-                  weeks: weeks,
-                  events: _events,
-                  weekRowCount: _weekRows,
-                  fontScale: _fontScale,
-                  onDayTap: (day, events) {
-                    _onUserInteraction();
-                    showDayDetailSheet(
-                      context,
-                      day,
-                      events,
-                      kiosk: true,
-                      fontScale: _fontScale,
-                    );
-                  },
+        body: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: _onUserInteraction,
+          onPanDown: (_) => _onUserInteraction(),
+          child: _error != null
+              ? Center(child: Text(_error!))
+              : Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: CalendarGrid(
+                    weeks: weeks,
+                    events: _events,
+                    weekRowCount: _weekRows,
+                    fontScale: _fontScale,
+                    onDayTap: (day, events) {
+                      _onUserInteraction();
+                      showDayDetailSheet(
+                        context,
+                        day,
+                        events,
+                        kiosk: true,
+                        fontScale: _fontScale,
+                      );
+                    },
+                  ),
                 ),
-              ),
-      ),
+        ),
     );
   }
 }
