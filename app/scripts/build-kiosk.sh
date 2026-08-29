@@ -26,11 +26,8 @@ if [[ ! -d "$ANDROID_HOME/platforms" ]]; then
   echo "Run: app/scripts/setup-dev-android.sh"
   exit 1
 fi
-if [[ ! -f "$SCRIPT_DIR/../android/key.properties" ]]; then
-  echo "WARNING: android/key.properties missing — APK will use ephemeral debug signing."
-  echo "         Run: app/scripts/setup-android-signing.sh --import ~/.config/family-calendar/windows-debug.keystore"
-  echo
-fi
+
+android_ensure_release_signing "$SCRIPT_DIR"
 
 android_acquire_build_lock
 pushd "$APP_DIR" >/dev/null

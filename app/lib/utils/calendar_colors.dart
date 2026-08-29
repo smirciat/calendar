@@ -10,7 +10,14 @@ const calendarColorPalette = [
   '#FF6D00', // orange
   '#00897B', // teal
   '#E91E63', // pink
+  '#000000', // black
 ];
+
+Color swatchCheckColor(String hex) {
+  return parseCalendarColor(hex).computeLuminance() > 0.5
+      ? Colors.black
+      : Colors.white;
+}
 
 Color parseCalendarColor(String hex) {
   final value = hex.replaceFirst('#', '');

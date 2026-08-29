@@ -54,6 +54,8 @@ if command -v aapt >/dev/null 2>&1; then
   echo "Verified package: $ACTUAL"
 fi
 
+android_verify_apk_signing "$APK_PATH" "$APP_DIR/android/key.properties"
+
 echo "App ID:  $ANDROID_APP_ID"
 echo "Group:   $FIREBASE_TESTERS_GROUP"
 echo "APK:     $APK_PATH"

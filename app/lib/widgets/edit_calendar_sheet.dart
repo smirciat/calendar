@@ -5,12 +5,27 @@ import 'package:family_calendar/services/api_client.dart';
 import 'package:family_calendar/utils/calendar_colors.dart';
 import 'package:family_calendar/widgets/sheet_padding.dart';
 
-Future<CalendarConnection?> showEditCalendarSheet(
+class EditCalendarSheetResult {
+  const EditCalendarSheetResult._({this.calendar, this.removedId});
+
+  const EditCalendarSheetResult.updated(CalendarConnection calendar)
+    : this._(calendar: calendar);
+
+  const EditCalendarSheetResult.removed(String removedId)
+    : this._(removedId: removedId);
+
+  final CalendarConnection? calendar;
+  final String? removedId;
+
+  bool get wasRemoved => removedId != null;
+}
+
+Future<EditCalendarSheetResult?> showEditCalendarSheet(
   BuildContext context, {
   required ApiClient api,
   required CalendarConnection calendar,
 }) {
-  return showModalBottomSheet<CalendarConnection>(
+  return showModalBottomSheet<EditCalendarSheetResult>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
@@ -33,7 +48,7 @@ class _EditCalendarSheet extends StatefulWidget {
 class _EditCalendarSheetState extends State<_EditCalendarSheet> {
   late final TextEditingController _nicknameController;
   late String _selectedColor;
-  bool _saving = false;
+  bool _busy = false;
   String? _error;
 
   @override
@@ -57,7 +72,7 @@ class _EditCalendarSheetState extends State<_EditCalendarSheet> {
     }
 
     setState(() {
-      _saving = true;
+      _busy = true;
       _error = null;
     });
 
@@ -68,11 +83,60 @@ class _EditCalendarSheetState extends State<_EditCalendarSheet> {
         color: _selectedColor,
       );
       if (!mounted) return;
-      Navigator.of(context).pop(updated);
+      Navigator.of(context).pop(EditCalendarSheetResult.updated(updated));
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() {
-        _saving = false;
+        _busy = false;
+        _error = error.message;
+      });
+    }
+  }
+
+  Future<void> _confirmRemove() async {
+    final calendar = widget.calendar;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove calendar?'),
+        content: Text(
+          calendar.isIcs
+              ? 'Remove "${calendar.nickname}" from the family calendar? '
+                    'Synced events from this link will disappear from the wall.'
+              : 'Remove "${calendar.nickname}" (${calendar.subtitle}) from the '
+                    'family calendar? Events will stop syncing. You can link '
+                    'this Google account again later.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(
+              'Remove',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+
+    try {
+      await widget.api.deleteCalendar(calendar.id);
+      if (!mounted) return;
+      Navigator.of(context).pop(EditCalendarSheetResult.removed(calendar.id));
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
         _error = error.message;
       });
     }
@@ -104,7 +168,7 @@ class _EditCalendarSheetState extends State<_EditCalendarSheet> {
               border: OutlineInputBorder(),
             ),
             textCapitalization: TextCapitalization.words,
-            enabled: !_saving,
+            enabled: !_busy,
           ),
           const SizedBox(height: 16),
           Text('Color', style: Theme.of(context).textTheme.titleSmall),
@@ -115,7 +179,7 @@ class _EditCalendarSheetState extends State<_EditCalendarSheet> {
             children: calendarColorPalette.map((hex) {
               final selected = hex == _selectedColor;
               return InkWell(
-                onTap: _saving ? null : () => setState(() => _selectedColor = hex),
+                onTap: _busy ? null : () => setState(() => _selectedColor = hex),
                 customBorder: const CircleBorder(),
                 child: Container(
                   width: 40,
@@ -126,12 +190,18 @@ class _EditCalendarSheetState extends State<_EditCalendarSheet> {
                     border: Border.all(
                       color: selected
                           ? Theme.of(context).colorScheme.onSurface
+                          : hex == '#000000'
+                          ? Theme.of(context).dividerColor
                           : Colors.transparent,
                       width: 3,
                     ),
                   ),
                   child: selected
-                      ? const Icon(Icons.check, color: Colors.white, size: 20)
+                      ? Icon(
+                          Icons.check,
+                          color: swatchCheckColor(hex),
+                          size: 20,
+                        )
                       : null,
                 ),
               );
@@ -146,14 +216,22 @@ class _EditCalendarSheetState extends State<_EditCalendarSheet> {
           ],
           const SizedBox(height: 20),
           FilledButton(
-            onPressed: _saving ? null : _save,
-            child: _saving
+            onPressed: _busy ? null : _save,
+            child: _busy
                 ? const SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Text('Save'),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _busy ? null : _confirmRemove,
+            child: Text(
+              'Remove calendar',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ),
         ],
       ),

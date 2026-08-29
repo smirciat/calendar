@@ -216,13 +216,37 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
   }
 
   Future<void> _editCalendar(CalendarConnection calendar) async {
-    final updated = await showEditCalendarSheet(
+    final result = await showEditCalendarSheet(
       context,
       api: widget.api,
       calendar: calendar,
     );
-    if (updated == null || !mounted) return;
+    if (result == null || !mounted) return;
 
+    if (result.wasRemoved) {
+      final removedId = result.removedId!;
+      setState(() {
+        _calendars = _calendars.where((item) => item.id != removedId).toList();
+      });
+      try {
+        final range = _eventRange();
+        final events = await widget.api.getEvents(from: range.from, to: range.to);
+        if (!mounted) return;
+        setState(() => _events = events);
+      } on ApiException catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${calendar.nickname} removed')),
+      );
+      return;
+    }
+
+    final updated = result.calendar!;
     setState(() {
       _calendars = _calendars
           .map((item) => item.id == updated.id ? updated : item)

@@ -39,6 +39,7 @@ const CALENDAR_COLORS = [
   '#FF6D00',
   '#00897B',
   '#E91E63',
+  '#000000',
 ];
 
 async function defaultColorForFamily(familyId: string): Promise<string> {

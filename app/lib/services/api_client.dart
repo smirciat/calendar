@@ -129,6 +129,20 @@ class ApiClient {
     return CalendarConnection.fromJson(body);
   }
 
+  /// Removes a linked Google account or ICS feed. Server deletes cached events too.
+  Future<void> deleteCalendar(String id) async {
+    final response = await http.delete(
+      _uri('/api/v1/calendars/$id'),
+      headers: _headers,
+    );
+    if (response.statusCode == 404) {
+      throw ApiException('Calendar not found', statusCode: 404);
+    }
+    if (response.statusCode >= 400) {
+      throw ApiException('Failed to remove calendar', statusCode: response.statusCode);
+    }
+  }
+
   Future<CalendarConnection> addIcsCalendar({
     required String feedUrl,
     String? nickname,

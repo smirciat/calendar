@@ -27,6 +27,35 @@ if [[ -d "$ANDROID_HOME/build-tools" ]]; then
   fi
 fi
 
+android_ensure_release_signing() {
+  local script_dir="${1:?}"
+  local key_props="$script_dir/../android/key.properties"
+  local default_keystore="${HOME}/.config/family-calendar/windows-debug.keystore"
+
+  if [[ -f "$key_props" ]]; then
+    local store_file
+    store_file="$(sed -n 's/^storeFile=//p' "$key_props" | head -1)"
+    if [[ -n "$store_file" && -f "$store_file" ]]; then
+      return 0
+    fi
+    echo "ERROR: $key_props points to missing keystore: ${store_file:-<unset>}"
+    echo "       Run: app/scripts/setup-android-signing.sh --import ~/.config/family-calendar/windows-debug.keystore"
+    exit 1
+  fi
+
+  if [[ -f "$default_keystore" ]]; then
+    echo "Configuring release signing from $default_keystore ..."
+    "$script_dir/setup-android-signing.sh" --import "$default_keystore"
+    return 0
+  fi
+
+  echo "ERROR: android/key.properties missing and no keystore at $default_keystore"
+  echo "       Without this, Linux builds sign with a different debug key than Windows/Firebase installs."
+  echo "       Run: app/scripts/upload-android-keystore.bat  (on Windows PC)"
+  echo "       Then: app/scripts/setup-android-signing.sh --import ~/.config/family-calendar/windows-debug.keystore"
+  exit 1
+}
+
 android_acquire_build_lock() {
   exec 9>"$ANDROID_BUILD_LOCK"
   if ! flock -w 300 9; then

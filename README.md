@@ -63,7 +63,7 @@ Optional override path: `EVENT_DISPLAY_RULES_PATH` in `.env`.
 
 ### Android signing (mobile + kiosk)
 
-Both Android flavors use **`android/key.properties`** when present (via `setup-android-signing.sh`). The same key is required for **kiosk OTA updates** and consistent **mobile** Firebase installs.
+Both Android flavors use **`android/key.properties`** (via `setup-android-signing.sh`). The **same Windows debug keystore** must sign every mobile and kiosk release — otherwise Firebase installs uninstall/reinstall and kiosk OTA fails with “App not installed”.
 
 **iOS does not use this keystore** — phones are signed in Xcode with your Apple Developer certificate (`build-ios.sh` on a Mac).
 
@@ -76,6 +76,8 @@ app\scripts\upload-android-keystore.bat
 # On bering-dev:
 app/scripts/setup-android-signing.sh --import ~/.config/family-calendar/windows-debug.keystore
 ```
+
+`build-mobile.sh` and `build-kiosk.sh` **auto-import** that keystore if `key.properties` is missing, or **exit with an error**. After each build, and before Firebase/OTA upload, scripts print **`Verified signing certificate matches key.properties`** — do not distribute if that line is missing.
 
 Legacy script names `upload-kiosk-keystore.bat` and `setup-kiosk-signing.sh` still work (they call the Android versions).
 
@@ -151,12 +153,30 @@ Then build / release:
 
 ```bash
 app/scripts/build-mobile.sh
+app/scripts/distribute-mobile.sh "Release notes"   # verifies signing before upload
 app/scripts/build-kiosk.sh
-app/scripts/distribute-mobile.sh "Release notes"
-app/scripts/distribute-kiosk.sh
+app/scripts/distribute-kiosk.sh                  # verifies signing before deploy
 # or all Android steps:
 app/scripts/android-release.sh "Release notes"
 ```
+
+### Push mobile build (bering-dev checklist)
+
+1. Bump `app/pubspec.yaml` (e.g. `1.0.1+23` — name + build number after `+`).
+2. Commit and push; on bering-dev: `git pull`.
+3. Build and upload:
+
+```bash
+app/scripts/build-mobile.sh
+app/scripts/distribute-mobile.sh "Build 23: …"
+```
+
+4. Confirm both scripts print **`Verified signing certificate matches key.properties`**.
+5. Phones: install from Firebase App Distribution email (should **update in place**, not uninstall/reinstall).
+
+**Kiosk OTA** is separate — only bump `KIOSK_LATEST_BUILD` in `.env` when you build and deploy a kiosk APK. Mobile-only releases do not require kiosk changes.
+
+**iOS (Mac):** after `git pull`, run `app/scripts/ios-release.sh "same notes"` (uses same `pubspec` build number).
 
 Firebase upload on the server (one-time, interactive):
 
@@ -345,3 +365,4 @@ Optional PowerShell equivalents: `app/scripts/*.ps1` (same behavior; `.bat` is p
 - **Firebase group error:** create tester group in Firebase Console first (default name: `family`)
 - **Kiosk pairing lost:** new package install = fresh app; generate a new pairing code on a phone
 - **Google sign-in 403 / “app has not completed verification”:** the OAuth app is in **Testing** mode. Each family member’s Google email must be added as a **Test user** on the [OAuth consent screen](https://console.cloud.google.com/apis/credentials/consent) in the same Google Cloud project as `GOOGLE_CLIENT_ID`. Set **Privacy policy URL** to `https://smircich.ddns.net/legal/privacy` and **Authorized redirect URI** to `https://smircich.ddns.net/api/v1/calendars/oauth/callback`. Full Google verification is only needed if you publish the app publicly (not required for family-only use).
+- **Firebase install uninstalls then reinstalls:** the APK was signed with a **different key** than the installed app (common if `android/key.properties` was missing on bering-dev — Linux uses a different debug keystore than Windows). Run `app/scripts/setup-android-signing.sh --import ~/.config/family-calendar/windows-debug.keystore` before building; build scripts now fail or auto-configure if signing is wrong. Same key is required for **mobile Firebase** and **kiosk OTA**.

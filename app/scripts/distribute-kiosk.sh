@@ -11,6 +11,8 @@ ENV_FILE="$REPO_ROOT/.env"
 APK_PATH="$APP_DIR/build/app/outputs/flutter-apk/app-kiosk-release.apk"
 EXPECTED_PACKAGE="com.smircich.familycalendar.kiosk"
 
+# shellcheck source=_android-env.sh
+source "$SCRIPT_DIR/_android-env.sh"
 # shellcheck source=_env.sh
 source "$SCRIPT_DIR/_env.sh"
 load_kiosk_deploy_env
@@ -38,6 +40,8 @@ if command -v aapt >/dev/null 2>&1; then
   fi
   echo "Verified package: $ACTUAL"
 fi
+
+android_verify_apk_signing "$APK_PATH" "$APP_DIR/android/key.properties"
 
 echo "Uploading $APK_PATH ..."
 deploy_dir="$(dirname "$KIOSK_DEPLOY_PATH")"
