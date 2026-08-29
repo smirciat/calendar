@@ -144,6 +144,16 @@ calendarsRouter.patch('/:id', requireFamilyAuth, async (req, res) => {
   res.json(result.rows[0]);
 });
 
+calendarsRouter.delete('/:id', requireFamilyAuth, async (req, res) => {
+  const connectionId = String(req.params.id);
+  const removed = await removeCalendarConnection(connectionId, req.auth!.familyId);
+  if (!removed) {
+    res.status(404).json({ error: 'Calendar not found' });
+    return;
+  }
+  res.status(204).end();
+});
+
 calendarsRouter.get('/oauth/start', requireFamilyAuth, (req, res) => {
   if (!googleOAuthConfigured()) {
     res.status(503).json({ error: 'Google OAuth not configured on server' });
@@ -259,12 +269,30 @@ export async function syncCalendarConnection(connectionId: string): Promise<void
   await listGoogleEventsForConnection(connectionId);
 }
 
+export async function removeCalendarConnection(
+  connectionId: string,
+  familyId?: string,
+): Promise<boolean> {
+  const result = familyId
+    ? await pool.query(
+        'DELETE FROM calendar_connections WHERE id = $1 AND family_id = $2 RETURNING id',
+        [connectionId, familyId],
+      )
+    : await pool.query(
+        'DELETE FROM calendar_connections WHERE id = $1 RETURNING id',
+        [connectionId],
+      );
+  return (result.rowCount ?? 0) > 0;
+}
+
 export async function listGoogleEventsForConnection(connectionId: string): Promise<void> {
   const result = await pool.query<{
     id: string;
     refresh_token_encrypted: string;
+    google_account_email: string | null;
+    nickname: string;
   }>(
-    `SELECT id, refresh_token_encrypted
+    `SELECT id, refresh_token_encrypted, google_account_email, nickname
      FROM calendar_connections
      WHERE id = $1 AND source_type = 'google'`,
     [connectionId],
@@ -305,9 +333,11 @@ export async function listGoogleEventsForConnection(connectionId: string): Promi
     });
 
     if (!response) {
+      const label = row.google_account_email ?? row.nickname ?? connectionId;
       console.error(
-        `Google token revoked for connection ${connectionId} — re-link in mobile app`,
+        `Google token revoked for ${label} — removing calendar and cached events`,
       );
+      await removeCalendarConnection(connectionId);
       return;
     }
 
