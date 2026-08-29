@@ -46,6 +46,7 @@ class SessionStorage {
   }
 
   static const _kioskWeekRowsKey = 'kiosk_week_rows';
+  static const _mobileWeekRowsKey = 'mobile_week_rows';
   static const _fontScaleKey = 'calendar_font_scale';
 
   Future<int> getKioskWeekRows() async {
@@ -56,6 +57,16 @@ class SessionStorage {
   Future<void> setKioskWeekRows(int value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_kioskWeekRowsKey, value);
+  }
+
+  Future<int> getMobileWeekRows() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_mobileWeekRowsKey) ?? 4;
+  }
+
+  Future<void> setMobileWeekRows(int value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_mobileWeekRowsKey, value);
   }
 
   Future<double> getFontScale() async {

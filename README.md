@@ -344,3 +344,4 @@ Optional PowerShell equivalents: `app/scripts/*.ps1` (same behavior; `.bat` is p
 - **Stale APK:** rebuild mobile after building kiosk; distribute script warns if kiosk APK is newer
 - **Firebase group error:** create tester group in Firebase Console first (default name: `family`)
 - **Kiosk pairing lost:** new package install = fresh app; generate a new pairing code on a phone
+- **Google sign-in 403 / “app has not completed verification”:** the OAuth app is in **Testing** mode. Each family member’s Google email must be added as a **Test user** on the [OAuth consent screen](https://console.cloud.google.com/apis/credentials/consent) in the same Google Cloud project as `GOOGLE_CLIENT_ID`. Set **Privacy policy URL** to `https://smircich.ddns.net/legal/privacy` and **Authorized redirect URI** to `https://smircich.ddns.net/api/v1/calendars/oauth/callback`. Full Google verification is only needed if you publish the app publicly (not required for family-only use).

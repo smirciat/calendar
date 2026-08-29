@@ -36,6 +36,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
   bool _loading = true;
   String? _error;
   double _fontScale = 1.0;
+  int _weekRows = 4;
   Timer? _pollTimer;
   final _storage = SessionStorage();
 
@@ -43,7 +44,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadFontScale();
+    _loadDisplaySettings();
     _refresh(showSpinner: true);
     _pollTimer = Timer.periodic(calendarEventPollInterval, (_) {
       _pollEvents();
@@ -67,15 +68,40 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
     }
   }
 
-  Future<void> _loadFontScale() async {
+  Future<void> _loadDisplaySettings() async {
     final scale = await _storage.getFontScale();
+    final rows = await _storage.getMobileWeekRows();
     if (!mounted) return;
-    setState(() => _fontScale = scale);
+    final rowsChanged = rows != _weekRows;
+    setState(() {
+      _fontScale = scale;
+      _weekRows = rows;
+    });
+    if (rowsChanged) {
+      unawaited(_pollEvents());
+    }
   }
 
   Future<void> _setFontScale(double scale) async {
     setState(() => _fontScale = scale);
     await _storage.setFontScale(scale);
+  }
+
+  Future<void> _setWeekRows(int rows) async {
+    if (rows == _weekRows) return;
+    setState(() => _weekRows = rows);
+    await _storage.setMobileWeekRows(rows);
+    await _pollEvents();
+  }
+
+  ({DateTime from, DateTime to}) _eventRange() {
+    final from = DateTime.now().subtract(const Duration(days: 7));
+    final to = DateTime.now().add(Duration(days: 7 * _weekRows + 7));
+    return (from: from, to: to);
+  }
+
+  int _visibleWeekRows(BuildContext context) {
+    return MediaQuery.orientationOf(context) == Orientation.landscape ? 2 : _weekRows;
   }
 
   Future<void> _loadCalendars() async {
@@ -100,9 +126,8 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
     }
     try {
       final calendars = await widget.api.listCalendars();
-      final from = DateTime.now().subtract(const Duration(days: 7));
-      final to = DateTime.now().add(const Duration(days: 28));
-      final events = await widget.api.getEvents(from: from, to: to);
+      final range = _eventRange();
+      final events = await widget.api.getEvents(from: range.from, to: range.to);
       if (!mounted) return;
       setState(() {
         _calendars = calendars;
@@ -125,9 +150,8 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
 
   Future<void> _pollEvents() async {
     try {
-      final from = DateTime.now().subtract(const Duration(days: 7));
-      final to = DateTime.now().add(const Duration(days: 28));
-      final events = await widget.api.getEvents(from: from, to: to);
+      final range = _eventRange();
+      final events = await widget.api.getEvents(from: range.from, to: range.to);
       if (!mounted) return;
       setState(() => _events = events);
     } on ApiException {
@@ -163,7 +187,12 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Complete Google sign-in in the browser, then refresh.'),
+          content: Text(
+            'Complete Google sign-in in the browser, then refresh. '
+            'If Google says the app is unverified, ask the admin to add your '
+            'email as a test user in Google Cloud Console.',
+          ),
+          duration: Duration(seconds: 6),
         ),
       );
     } on ApiException catch (error) {
@@ -201,9 +230,8 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
     });
 
     try {
-      final from = DateTime.now().subtract(const Duration(days: 7));
-      final to = DateTime.now().add(const Duration(days: 28));
-      final events = await widget.api.getEvents(from: from, to: to);
+      final range = _eventRange();
+      final events = await widget.api.getEvents(from: range.from, to: range.to);
       if (!mounted) return;
       setState(() => _events = events);
     } on ApiException catch (error) {
@@ -216,12 +244,37 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final weeks = buildWeekGrid(anchor: DateTime.now(), weekCount: 4);
+    final visibleWeekRows = _visibleWeekRows(context);
+    final isPortrait =
+        MediaQuery.orientationOf(context) == Orientation.portrait;
+    final weeks = buildWeekGrid(
+      anchor: DateTime.now(),
+      weekCount: visibleWeekRows,
+    );
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Family Calendar'),
         actions: [
+          if (_tab == 0 && isPortrait)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<int>(
+                  value: _weekRows,
+                  alignment: Alignment.centerRight,
+                  items: const [
+                    DropdownMenuItem(value: 2, child: Text('2 rows')),
+                    DropdownMenuItem(value: 3, child: Text('3 rows')),
+                    DropdownMenuItem(value: 4, child: Text('4 rows')),
+                    DropdownMenuItem(value: 5, child: Text('5 rows')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) _setWeekRows(value);
+                  },
+                ),
+              ),
+            ),
           IconButton(onPressed: () => _refresh(), icon: const Icon(Icons.refresh)),
           IconButton(onPressed: widget.onLogout, icon: const Icon(Icons.logout)),
         ],
@@ -249,6 +302,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
               child: CalendarGrid(
                 weeks: weeks,
                 events: _events,
+                weekRowCount: visibleWeekRows,
                 compact: true,
                 fontScale: _fontScale,
                 onDayTap: (day, events) => showDayDetailSheet(
@@ -289,6 +343,32 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
                           onChanged: (value) {
                             if (value != null) _setFontScale(value);
                           },
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Weeks on calendar',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<int>(
+                          value: _weekRows,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 2, child: Text('2 rows')),
+                            DropdownMenuItem(value: 3, child: Text('3 rows')),
+                            DropdownMenuItem(value: 4, child: Text('4 rows')),
+                            DropdownMenuItem(value: 5, child: Text('5 rows')),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) _setWeekRows(value);
+                          },
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Landscape always shows 2 weeks.',
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
                     ),

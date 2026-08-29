@@ -178,6 +178,15 @@ calendarsRouter.get('/oauth/callback', async (req, res) => {
 
   const code = req.query.code as string | undefined;
   const familyId = req.query.state as string | undefined;
+  const oauthError = req.query.error as string | undefined;
+  if (oauthError) {
+    const message =
+      oauthError === 'access_denied'
+        ? 'Google sign-in was blocked. Ask the family admin to add your Google email as a test user in Google Cloud Console (OAuth consent screen), then try again.'
+        : `Google sign-in failed (${oauthError}). Try again or contact the family admin.`;
+    res.status(403).send(message);
+    return;
+  }
   if (!code || !familyId) {
     res.status(400).send('Missing code or state');
     return;
@@ -246,10 +255,19 @@ calendarsRouter.get('/oauth/callback', async (req, res) => {
     );
   } catch (error) {
     console.error('OAuth callback failed:', error);
-    const message =
+    const gaxiosError = error as {
+      response?: { status?: number; data?: { error?: string } };
+    };
+    const status = gaxiosError.response?.status;
+    const apiError = gaxiosError.response?.data?.error;
+    let message =
       error instanceof Error && error.message.includes('Insufficient Permission')
         ? 'Calendar read permission was not granted. Remove Family Calendar at myaccount.google.com/permissions, then link again and allow calendar access.'
         : 'Failed to link calendar. Check server logs and try again.';
+    if (status === 403 || apiError === 'access_denied') {
+      message =
+        'Google sign-in was blocked. Ask the family admin to add your Google email as a test user in Google Cloud Console (OAuth consent screen), then try again.';
+    }
     res.status(500).send(message);
   }
 });
