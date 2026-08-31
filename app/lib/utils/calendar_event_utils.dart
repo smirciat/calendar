@@ -224,10 +224,14 @@ String _dedupeKey(CalendarEvent event, {DateTime? onDay}) {
       : eventStartDay(event);
   final dayKey = _dayKey(day);
 
-  // Same calendar day view: match by title only so all-day spans, daily
-  // all-day entries, and timed blocks for the same real-world event merge.
+  // Day grid: all-day entries merge by title (fair spans, etc.). Timed events
+  // also include start time so parallel shifts with the same title stay separate.
   if (onDay != null) {
-    return '$title|$dayKey';
+    if (event.allDay) {
+      return '$title|$dayKey|allDay';
+    }
+    final local = event.startAt.toLocal();
+    return '$title|$dayKey|${local.hour}:${local.minute}';
   }
 
   if (event.allDay) {

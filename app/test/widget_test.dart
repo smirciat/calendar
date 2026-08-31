@@ -98,7 +98,7 @@ void main() {
     expect(groups.first.duplicateCount, 1);
   });
 
-  test('groupDuplicateEvents matches multi-day all-day with timed daily entry', () {
+  test('groupDuplicateEvents keeps all-day and timed same-title separate on day grid', () {
     final day = DateTime(2026, 8, 27);
     final multiDay = _event(
       id: '1',
@@ -119,8 +119,8 @@ void main() {
     final dayEvents = eventsForDay([multiDay, timedDaily], day);
     final groups = groupDuplicateEvents(dayEvents, onDay: day);
 
-    expect(groups.length, 1);
-    expect(groups.first.events.length, 2);
+    expect(groups.length, 2);
+    expect(groups.every((group) => group.events.length == 1), isTrue);
   });
 
   test('groupDuplicateEvents matches titles case-insensitively', () {
@@ -135,6 +135,31 @@ void main() {
 
     expect(groups.length, 1);
     expect(groups.first.events.length, 2);
+  });
+
+  test('groupDuplicateEvents keeps same-title shifts separate on day grid', () {
+    final day = DateTime(2026, 9, 12);
+    final events = [
+      _event(
+        id: '1',
+        title: 'Crew Counter at BV11 - Albany',
+        startAt: DateTime(2026, 9, 12, 12, 0),
+        endAt: DateTime(2026, 9, 12, 17, 0),
+        nickname: 'Allie',
+      ),
+      _event(
+        id: '2',
+        title: 'Crew Counter at BV11 - Albany',
+        startAt: DateTime(2026, 9, 12, 19, 0),
+        endAt: DateTime(2026, 9, 12, 23, 30),
+        nickname: 'AJ',
+      ),
+    ];
+
+    final groups = groupDuplicateEvents(events, onDay: day);
+
+    expect(groups.length, 2);
+    expect(groups.every((group) => group.events.length == 1), isTrue);
   });
 
   test('eventsForDay puts ICS work shift calendars near the top', () {
