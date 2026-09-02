@@ -9,7 +9,7 @@ Flutter + Node 24 app replacing a wall kiosk eCalendar. Read `project-descriptio
 
 ## Stack
 
-- **app/** — Flutter, two flavors: `kiosk` (landscape, read-only, ADB) and `mobile` (portrait, Firebase App Distro)
+- **app/** — Flutter, two flavors: `kiosk` (landscape, read-only) and `mobile` (portrait, Firebase App Distro). **Android APKs built on bering-dev**; iOS on Mac
 - **server/** — Node 24 on bering-dev, PM2, Postgres, `/api/v1` routes
 - **Auth** — Password + long-lived JWT; kiosk uses device token; Google OAuth only on mobile
 

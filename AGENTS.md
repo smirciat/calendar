@@ -50,7 +50,7 @@ Postgres (families, users, calendar links, cached events, devices)
 3. **Family & calendar APIs** — CRUD nicknames/colors, list merged events by date range, device registration.
 4. **Flutter mobile** — Login, link Google account, calendar list UI, week grid (portrait).
 5. **Flutter kiosk** — Device pairing, landscape grid (7×5), scroll + idle reset, day popup, read-only.
-6. **Ops** — Deploy to bering-dev, Firebase App Distribution, kiosk APK build + sideload docs.
+6. **Ops** — Deploy to bering-dev; **Android APK builds on bering-dev**; iOS on Mac; Firebase App Distribution; kiosk OTA from server; USB sideload for first kiosk install (Windows)
 
 ## Coding standards
 
@@ -86,17 +86,19 @@ Postgres (families, users, calendar links, cached events, devices)
 
 **Fujia wall tablets:** Do **not** `pm disable com.fujia.calendar` — firmware may factory-restore on reboot and **delete sideloaded apps**. Keep Fujia installed; set Family Calendar as default HOME instead.
 
-Setup scripts (copy `app/scripts/` to Windows build PC):
+Setup scripts for **first USB install** (copy `app/scripts/` to a Windows PC with `adb`):
 
 - **`kiosk-setup.bat`** — double-click or run in CMD (no grep, no typos)
 - **`kiosk-setup.ps1`** — PowerShell: `powershell -ExecutionPolicy Bypass -File .\kiosk-setup.ps1`
 
+Release kiosk APKs are built on **bering-dev** (`app/scripts/build-kiosk.sh`); copy the APK to the Windows PC only if sideloading without pulling from the server.
+
 The `add-role-holder` command often fails on Android 10 with a Java exception — that is normal. The script also runs `set-home-activity` and opens **Settings → Home app** for manual selection.
 
 ```powershell
-# Windows — from calendar\app after building kiosk APK
+# Windows — USB sideload (APK from bering-dev build or OTA download)
 adb shell pm enable com.fujia.calendar
-adb install -r build\app\outputs\flutter-apk\app-kiosk-release.apk
+adb install -r app-kiosk-release.apk
 adb shell am start -n com.smircich.familycalendar.kiosk/com.familycalendar.family_calendar.MainActivity
 adb shell cmd role add-role-holder android.app.role.HOME com.smircich.familycalendar.kiosk
 adb shell cmd package set-home-activity com.smircich.familycalendar.kiosk/com.familycalendar.family_calendar.KioskHome

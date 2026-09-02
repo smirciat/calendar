@@ -421,6 +421,12 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
                         (calendar) => ListTile(
                           leading: CircleAvatar(
                             backgroundColor: parseCalendarColor(calendar.color),
+                            foregroundColor: swatchCheckColor(calendar.color),
+                            child: Text(
+                              calendar.nickname.isNotEmpty
+                                  ? calendar.nickname[0].toUpperCase()
+                                  : '?',
+                            ),
                           ),
                           title: Text(calendar.nickname),
                           subtitle: Text(

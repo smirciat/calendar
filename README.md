@@ -7,6 +7,8 @@ Flutter + Node family wall calendar. Phones manage Google accounts; the wall kio
 | **mobile** | `com.smircich.familycalendar` | `app-mobile-release.apk` / iOS IPA | Firebase App Distribution (phones) |
 | **kiosk** | `com.smircich.familycalendar.kiosk` | `app-kiosk-release.apk` | OTA from server (or ADB for first install) |
 
+**Build hosts:** **Android APKs** (mobile + kiosk) are built on **bering-dev** (Linux). **iOS IPAs** are built on a **Mac** with Xcode. Windows `.bat` scripts remain for **USB sideload** of the kiosk (`kiosk-setup.bat`) only — not for release builds.
+
 Version is set in `app/pubspec.yaml` (`version: 1.0.1+17` → name `1.0.1`, build number `17`). Bump the name for user-visible releases (`1.0.2`, …) and the number after `+` every build.
 
 See `AGENTS.md` for architecture and server setup.
@@ -63,17 +65,17 @@ Optional override path: `EVENT_DISPLAY_RULES_PATH` in `.env`.
 
 ### Android signing (mobile + kiosk)
 
-Both Android flavors use **`android/key.properties`** (via `setup-android-signing.sh`). The **same Windows debug keystore** must sign every mobile and kiosk release — otherwise Firebase installs uninstall/reinstall and kiosk OTA fails with “App not installed”.
+Both Android flavors use **`android/key.properties`** on **bering-dev** (via `setup-android-signing.sh`). Every release must use the **same signing key** — otherwise Firebase installs uninstall/reinstall and kiosk OTA fails with “App not installed”.
 
 **iOS does not use this keystore** — phones are signed in Xcode with your Apple Developer certificate (`build-ios.sh` on a Mac).
 
 One-time setup:
 
 ```bash
-# From Windows (PC that signed prior Android builds):
+# From Windows (one-time): upload the keystore that signed tablets already in the field
 app\scripts\upload-android-keystore.bat
 
-# On bering-dev:
+# On bering-dev (canonical Android build host):
 app/scripts/setup-android-signing.sh --import ~/.config/family-calendar/windows-debug.keystore
 ```
 
@@ -83,23 +85,17 @@ Legacy script names `upload-kiosk-keystore.bat` and `setup-kiosk-signing.sh` sti
 
 ### Publish a kiosk release (OTA)
 
+All steps on **bering-dev** after `git pull`:
+
 1. **Bump version** in `app/pubspec.yaml` (e.g. `1.0.1+19`).
-2. **Build** with signing configured: `app/scripts/build-kiosk.sh`
-3. **Copy APK** to bering-dev (no sudo — directory is owned by `andy`):
+2. **Build and deploy:**
 
 ```bash
-scp app/build/app/outputs/flutter-apk/app-kiosk-release.apk \
-  bering-dev:/var/www/family-calendar/releases/app-kiosk-release.apk
+app/scripts/build-kiosk.sh
+app/scripts/distribute-kiosk.sh    # copies to /var/www/family-calendar/releases/
 ```
 
-Or on bering-dev directly after building:
-
-```bash
-cp app/build/app/outputs/flutter-apk/app-kiosk-release.apk \
-  /var/www/family-calendar/releases/app-kiosk-release.apk
-```
-
-4. **Update `.env`** in `/home/andy/calendar/.env` (must match `pubspec.yaml`):
+3. **Update `.env`** in `/home/andy/calendar/.env` (must match `pubspec.yaml`):
 
 ```env
 KIOSK_LATEST_VERSION=1.0.1
@@ -108,13 +104,13 @@ KIOSK_APK_URL=https://smircich.ddns.net/releases/app-kiosk-release.apk
 KIOSK_RELEASE_NOTES=Short note shown on the wall admin screen
 ```
 
-5. **Restart Node:**
+4. **Restart Node:**
 
 ```bash
 cd ~/calendar/server && npm run build && pm2 restart family-calendar
 ```
 
-6. **On the wall tablet:** tap **“Family Calendar” in the title bar 7 times** → **Check for updates** → **Download and install** → tap **Install** on the Android prompt.
+5. **On the wall tablet:** tap **“Family Calendar” in the title bar 7 times** → **Check for updates** → **Download and install** → tap **Install** on the Android prompt.
 
 The installer briefly exits kiosk lock mode so the system prompt can appear. If prompted once, enable **Install unknown apps** for Family Calendar in Settings, then retry.
 
@@ -122,16 +118,15 @@ If install fails with **“App not installed”**, the APK signing key does not 
 
 Update check API: `GET /api/v1/kiosk/update?build=N` (returns `204` if already current).
 
-**First install** on a new tablet still requires USB/ADB once (`kiosk-setup.bat`); OTA handles updates after that.
+**First install** on a new tablet still requires USB/ADB once from a Windows PC (`kiosk-setup.bat`); OTA handles updates after that.
 
 ## Prerequisites
 
-- Flutter SDK (with Android toolchain)
-- **Windows:** run `.bat` scripts from `app/scripts/` (safe from any directory)
-- **Firebase (mobile):** Node.js + `npx firebase-tools login` (or `npm install -g firebase-tools`)
+- **Android builds:** bering-dev with Flutter + Android SDK (`app/scripts/setup-dev-android.sh`)
+- **Firebase (mobile):** `npx firebase-tools login` on bering-dev (one-time)
 - **iOS (phones):** Mac with Xcode, Apple Distribution cert, Ad Hoc devices registered
-- **Kiosk (wall):** `adb` in PATH, USB debugging on tablet
-- **`.env`** at repo root with at least:
+- **Kiosk first install:** Windows PC with `adb` in PATH, USB debugging on tablet
+- **`.env`** at repo root on bering-dev (and on Mac for iOS distribute) with at least:
 
 ```env
 ANDROID_APP_ID=1:YOUR_PROJECT:android:YOUR_APP_HASH
@@ -140,86 +135,54 @@ IOS_APP_ID=1:YOUR_PROJECT:ios:YOUR_APP_HASH
 
 Create Firebase tester groups **`family-android`** and **`family-ios`** before distributing. Group names are hard-coded in the distribute scripts.
 
-## Android builds on bering-dev (Linux)
+## Android builds (bering-dev)
 
-One-time setup (no root — installs JDK + Android SDK under `~/develop` and `~/Android`):
+**Canonical build host for mobile and kiosk APKs.** iOS builds stay on Mac (below).
+
+### One-time setup
 
 ```bash
+cd ~/calendar
 chmod +x app/scripts/*.sh   # once, after clone
 app/scripts/setup-dev-android.sh
+app/scripts/setup-android-signing.sh --import ~/.config/family-calendar/windows-debug.keystore
+npx firebase-tools login    # once, for mobile Firebase upload
 ```
 
-Then build / release:
+Gradle heap is capped at 2 GB in `app/android/gradle.properties` for the VM. Build **mobile and kiosk separately** (not in one shell chain) if memory is tight.
+
+### Every release
 
 ```bash
+cd ~/calendar && git pull
+
+# Mobile → Firebase
 app/scripts/build-mobile.sh
-app/scripts/distribute-mobile.sh "Release notes"   # verifies signing before upload
+app/scripts/distribute-mobile.sh "Build N: release notes"
+
+# Kiosk → OTA (also bump KIOSK_* in .env — see [Publish a kiosk release](#publish-a-kiosk-release-ota))
 app/scripts/build-kiosk.sh
-app/scripts/distribute-kiosk.sh                  # verifies signing before deploy
-# or all Android steps:
-app/scripts/android-release.sh "Release notes"
+app/scripts/distribute-kiosk.sh
+cd ~/calendar/server && pm2 restart family-calendar
+
+# Or mobile + kiosk build/upload in one go (kiosk still needs .env + pm2):
+app/scripts/android-release.sh "Build N: release notes"
 ```
 
-### Push mobile build (bering-dev checklist)
+Confirm each build prints **`Verified signing certificate matches key.properties`** before distributing.
 
-1. Bump `app/pubspec.yaml` (e.g. `1.0.1+23` — name + build number after `+`).
+### Push mobile build (checklist)
+
+1. Bump `app/pubspec.yaml` (e.g. `1.0.1+23`).
 2. Commit and push; on bering-dev: `git pull`.
-3. Build and upload:
+3. `app/scripts/build-mobile.sh` then `app/scripts/distribute-mobile.sh "…"`.
+4. Phones install from Firebase email (should **update in place**, not uninstall/reinstall).
 
-```bash
-app/scripts/build-mobile.sh
-app/scripts/distribute-mobile.sh "Build 23: …"
-```
+**Kiosk OTA** is separate — bump `KIOSK_LATEST_BUILD` in `.env` only when you deploy a kiosk APK.
 
-4. Confirm both scripts print **`Verified signing certificate matches key.properties`**.
-5. Phones: install from Firebase App Distribution email (should **update in place**, not uninstall/reinstall).
+**iOS (Mac):** after `git pull`, run `app/scripts/ios-release.sh "same notes"` (same `pubspec` build number).
 
-**Kiosk OTA** is separate — only bump `KIOSK_LATEST_BUILD` in `.env` when you build and deploy a kiosk APK. Mobile-only releases do not require kiosk changes.
-
-**iOS (Mac):** after `git pull`, run `app/scripts/ios-release.sh "same notes"` (uses same `pubspec` build number).
-
-Firebase upload on the server (one-time, interactive):
-
-```bash
-npx firebase-tools login
-# headless CI alternative: npx firebase-tools login:ci  → set FIREBASE_TOKEN in .env
-```
-
-**Note:** Gradle heap is capped at 2 GB in `app/android/gradle.properties` so builds fit the dev VM (15 GB RAM). First build downloads NDK/CMake automatically if not pre-installed by the setup script.
-
-## Mobile (phones) — Windows
-
-All scripts live in `app/scripts/`.
-
-### Build only
-
-```cmd
-app\scripts\build-mobile.bat
-```
-
-Runs:
-
-```cmd
-flutter build apk --flavor mobile -t lib/main_mobile.dart --release
-```
-
-Output: `app\build\app\outputs\flutter-apk\app-mobile-release.apk`
-
-Verifies package `com.smircich.familycalendar` before finishing.
-
-### Upload to Firebase
-
-```cmd
-app\scripts\distribute-mobile.bat "Release notes here"
-```
-
-Reads `ANDROID_APP_ID` from `.env`. Uploads to group **`family-android`**. Refuses kiosk APKs.
-
-### Build + upload
-
-```cmd
-app\scripts\mobile-release.bat "Release notes here"
-```
+Headless Firebase (optional): `npx firebase-tools login:ci` → set `FIREBASE_TOKEN` in `.env`.
 
 ## Mobile (phones) — macOS / iOS
 
@@ -251,42 +214,9 @@ Output: `app/build/ios/ipa/*.ipa` (Ad Hoc, bundle `com.smircich.familycalendar`)
 
 **Before first build:** register App ID **`com.smircich.familycalendar`** + family iPhone UDIDs in Apple Developer; Firebase iOS app must use the same bundle ID.
 
-## Kiosk (wall tablet) — Windows
+## Kiosk (wall tablet) — USB sideload (Windows)
 
-### Build only
-
-```cmd
-app\scripts\build-kiosk.bat
-```
-
-Runs:
-
-```cmd
-flutter build apk --flavor kiosk -t lib/main_kiosk.dart --release
-```
-
-Output: `app\build\app\outputs\flutter-apk\app-kiosk-release.apk`
-
-**Do not upload this to Firebase.**
-
-### Copy to server (OTA update)
-
-From `app/scripts/` after `build-kiosk.bat`:
-
-```cmd
-distribute-kiosk.bat
-```
-
-Or manually:
-
-```bash
-scp ../build/app/outputs/flutter-apk/app-kiosk-release.apk \
-  bering-dev:/var/www/family-calendar/releases/app-kiosk-release.apk
-```
-
-Then update `KIOSK_*` in `.env` and `pm2 restart family-calendar` — full steps in [Server (bering-dev)](#server-bering-dev--nginx-pm2-kiosk-ota).
-
-### Install + set as HOME launcher
+**Release builds and OTA deploy happen on bering-dev** ([Android builds](#android-builds-bering-dev), [kiosk OTA](#publish-a-kiosk-release-ota)). Use Windows only for the **first USB install** (or recovery) with a kiosk APK copied from bering-dev or built there.
 
 Tablet on USB, then:
 
@@ -294,25 +224,17 @@ Tablet on USB, then:
 app\scripts\kiosk-setup.bat
 ```
 
-Or manually:
+Or manually (APK path may be a copy from bering-dev):
 
 ```cmd
 adb uninstall com.smircich.familycalendar.kiosk
-adb install -r app\build\app\outputs\flutter-apk\app-kiosk-release.apk
+adb install -r app-kiosk-release.apk
 adb shell am start -n com.smircich.familycalendar.kiosk/com.familycalendar.family_calendar.MainActivity
 ```
 
 After a package-name change, run `kiosk-setup.bat` again to set HOME and re-pair the device.
 
-OTA updates after the first install are documented in [Server (bering-dev)](#server-bering-dev--nginx-pm2-kiosk-ota) above.
-
-## Kiosk — Linux / macOS
-
-```bash
-cd app
-flutter build apk --flavor kiosk -t lib/main_kiosk.dart --release
-./scripts/kiosk-setup.sh
-```
+OTA updates after the first install: [Publish a kiosk release (OTA)](#publish-a-kiosk-release-ota).
 
 ## Dev: run in Chrome (mobile UI)
 
@@ -321,48 +243,44 @@ cd app
 flutter run -d chrome -t lib/main_mobile.dart
 ```
 
-## Manual Flutter commands
+## Manual Flutter commands (bering-dev)
 
-If you prefer not to use scripts:
+```bash
+cd ~/calendar/app
+source ../app/scripts/_android-env.sh
 
-```cmd
-cd app
-
-REM Mobile
 flutter build apk --flavor mobile -t lib/main_mobile.dart --release
-firebase appdistribution:distribute build\app\outputs\flutter-apk\app-mobile-release.apk --app "YOUR_ANDROID_APP_ID" --groups "family" --release-notes "Notes"
-
-REM Kiosk
 flutter build apk --flavor kiosk -t lib/main_kiosk.dart --release
-adb install -r build\app\outputs\flutter-apk\app-kiosk-release.apk
 ```
 
-Bump version in `app/pubspec.yaml` before each release (e.g. `1.0.2+12` — name for humans, number after `+` for Android/iOS build codes).
+Prefer `app/scripts/build-mobile.sh` and `app/scripts/build-kiosk.sh` — they verify package name and signing.
 
 ## Script reference
 
 | Script | Purpose |
 |--------|---------|
-| `app/scripts/build-mobile.bat` | Build phone APK (Android) |
-| `app/scripts/distribute-mobile.bat` | Upload phone APK to Firebase |
-| `app/scripts/mobile-release.bat` | Build + upload phone APK (Android) |
-| `app/scripts/build-ios.sh` | Build phone IPA (iOS) |
+| **bering-dev (Android)** | |
+| `app/scripts/setup-dev-android.sh` | One-time JDK + Android SDK |
+| `app/scripts/setup-android-signing.sh` | Configure `key.properties` for mobile + kiosk |
+| `app/scripts/build-mobile.sh` | Build phone APK |
+| `app/scripts/distribute-mobile.sh` | Upload phone APK to Firebase |
+| `app/scripts/build-kiosk.sh` | Build wall APK |
+| `app/scripts/distribute-kiosk.sh` | Deploy wall APK for OTA |
+| `app/scripts/android-release.sh` | Build + distribute mobile + kiosk |
+| **Mac (iOS)** | |
+| `app/scripts/build-ios.sh` | Build phone IPA |
 | `app/scripts/distribute-ios.sh` | Upload phone IPA to Firebase |
-| `app/scripts/ios-release.sh` | Build + upload phone IPA (iOS) |
-| `app/scripts/build-kiosk.bat` | Build wall APK |
-| `app/scripts/distribute-kiosk.bat` | Upload wall APK to bering-dev (OTA) |
-| `app/scripts/distribute-kiosk.sh` | Same (Linux/macOS) |
-| `app/scripts/kiosk-setup.bat` | ADB install + HOME launcher setup (Windows) |
-| `app/scripts/kiosk-setup.sh` | Same for Linux/macOS |
-| `app/scripts/_verify-apk-package.bat` | Internal: package check (used by build/distribute) |
-
-Optional PowerShell equivalents: `app/scripts/*.ps1` (same behavior; `.bat` is preferred on Windows).
+| `app/scripts/ios-release.sh` | Build + upload phone IPA |
+| **Windows (USB sideload only)** | |
+| `app/scripts/upload-android-keystore.bat` | One-time: upload signing key to bering-dev |
+| `app/scripts/kiosk-setup.bat` | ADB install + HOME launcher setup |
+| **Legacy (avoid for releases)** | `.bat` build/distribute scripts, PowerShell `.ps1` equivalents |
 
 ## Common mistakes
 
-- **Wrong APK on Firebase:** use `build-mobile.bat`, not `build-kiosk.bat`
-- **Stale APK:** rebuild mobile after building kiosk; distribute script warns if kiosk APK is newer
-- **Firebase group error:** create tester group in Firebase Console first (default name: `family`)
+- **Building Android on Windows:** release APKs are built on **bering-dev** — Windows is only for USB sideload (`kiosk-setup.bat`) and one-time keystore upload
+- **Wrong APK on Firebase:** use `build-mobile.sh`, not `build-kiosk.sh`
+- **Gradle hang on bering-dev:** build mobile and kiosk in **separate** shell sessions; `pkill -f GradleDaemon` if stuck
 - **Kiosk pairing lost:** new package install = fresh app; generate a new pairing code on a phone
 - **Google sign-in 403 / “app has not completed verification”:** the OAuth app is in **Testing** mode. Each family member’s Google email must be added as a **Test user** on the [OAuth consent screen](https://console.cloud.google.com/apis/credentials/consent) in the same Google Cloud project as `GOOGLE_CLIENT_ID`. Set **Privacy policy URL** to `https://smircich.ddns.net/legal/privacy` and **Authorized redirect URI** to `https://smircich.ddns.net/api/v1/calendars/oauth/callback`. Full Google verification is only needed if you publish the app publicly (not required for family-only use).
 - **Firebase install uninstalls then reinstalls:** the APK was signed with a **different key** than the installed app (common if `android/key.properties` was missing on bering-dev — Linux uses a different debug keystore than Windows). Run `app/scripts/setup-android-signing.sh --import ~/.config/family-calendar/windows-debug.keystore` before building; build scripts now fail or auto-configure if signing is wrong. Same key is required for **mobile Firebase** and **kiosk OTA**.

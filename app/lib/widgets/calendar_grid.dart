@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'package:family_calendar/models/calendar_models.dart';
+import 'package:family_calendar/utils/calendar_colors.dart';
 import 'package:family_calendar/utils/calendar_event_utils.dart';
 
 class CalendarGrid extends StatelessWidget {
@@ -61,12 +62,6 @@ class CalendarGrid extends StatelessWidget {
       color: Theme.of(context).colorScheme.primary,
       fontWeight: FontWeight.w600,
     );
-  }
-
-  Color _parseColor(String hex) {
-    final value = hex.replaceFirst('#', '');
-    final parsed = int.parse('FF$value', radix: 16);
-    return Color(parsed);
   }
 
   @override
@@ -151,7 +146,6 @@ class CalendarGrid extends StatelessWidget {
                                         ...visibleGroups.map(
                                           (group) => _EventChip(
                                             group: group,
-                                            parseColor: _parseColor,
                                             fontScale: _densityScale,
                                           ),
                                         ),
@@ -189,23 +183,29 @@ class CalendarGrid extends StatelessWidget {
 class _EventChip extends StatelessWidget {
   const _EventChip({
     required this.group,
-    required this.parseColor,
     this.fontScale = 1.0,
   });
 
   final EventDisplayGroup group;
-  final Color Function(String hex) parseColor;
   final double fontScale;
 
   @override
   Widget build(BuildContext context) {
     final event = group.primary;
+    final chipColors = eventChipColors(
+      event.color,
+      Theme.of(context).colorScheme.surface,
+    );
+    final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+      fontSize: (Theme.of(context).textTheme.labelSmall?.fontSize ?? 11) * fontScale,
+      color: chipColors.foreground,
+    );
 
     return Container(
       margin: const EdgeInsets.only(bottom: 2),
       padding: EdgeInsets.symmetric(horizontal: 4 * fontScale, vertical: 2 * fontScale),
       decoration: BoxDecoration(
-        color: parseColor(event.color).withValues(alpha: 0.2),
+        color: chipColors.background,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
@@ -215,19 +215,13 @@ class _EventChip extends StatelessWidget {
               event.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontSize: (Theme.of(context).textTheme.labelSmall?.fontSize ?? 11) * fontScale,
-              ),
+              style: labelStyle,
             ),
           ),
           if (group.hasDuplicates)
             Text(
               '+${group.duplicateCount}',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-                fontSize: (Theme.of(context).textTheme.labelSmall?.fontSize ?? 11) * fontScale,
-              ),
+              style: labelStyle?.copyWith(fontWeight: FontWeight.bold),
             ),
         ],
       ),

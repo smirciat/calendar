@@ -1,5 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:family_calendar/models/calendar_models.dart';
+import 'package:family_calendar/utils/calendar_colors.dart';
 import 'package:family_calendar/utils/calendar_event_utils.dart';
 import 'package:family_calendar/widgets/calendar_grid.dart';
 
@@ -242,5 +244,25 @@ void main() {
     expect(segments.first.endColumn, 2);
     expect(segments.first.continuesAfter, isFalse);
     expect(segments.first.showTitle, isTrue);
+  });
+
+  test('eventChipColors uses white text on black', () {
+    const surface = Colors.white;
+    final colors = eventChipColors('#000000', surface);
+    expect(colors.foreground, Colors.white);
+    expect(colors.background, parseCalendarColor('#000000'));
+  });
+
+  test('eventChipColors uses dark text on light palette colors', () {
+    const surface = Colors.white;
+    for (final hex in calendarColorPalette) {
+      if (hex == '#000000') continue;
+      final colors = eventChipColors(hex, surface);
+      expect(
+        colors.foreground,
+        Colors.black87,
+        reason: 'expected dark text on $hex',
+      );
+    }
   });
 }
